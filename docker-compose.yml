@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tilexcare
+      POSTGRES_PASSWORD: tilexcare
+      POSTGRES_DB: tilexcare
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://tilexcare:tilexcare@postgres:5432/tilexcare?schema=public
+      JWT_SECRET: changeme-jwt-secret
+      ADMIN_EMAIL: admin@tilexcare.local
+      ADMIN_PASSWORD: changeme-admin-password
+    depends_on:
+      - postgres
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
