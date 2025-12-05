@@ -1,0 +1,5 @@
+export { default as DoctorDashboard } from './DoctorDashboard';
+export { default as DoctorAppointments } from './DoctorAppointments';
+export { default as DoctorAvailability } from './DoctorAvailability';
+export { default as DoctorEarnings } from './DoctorEarnings';
+export { default as DoctorProfile } from './DoctorProfile';

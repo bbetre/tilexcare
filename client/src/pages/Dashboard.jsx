@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminDoctorList from '../components/AdminDoctorList';
+import DoctorAvailability from '../components/DoctorAvailability';
+import PatientDoctorList from '../components/PatientDoctorList';
+import AppointmentList from '../components/AppointmentList';
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -37,17 +40,27 @@ const Dashboard = () => {
 
             {user.role === 'doctor' && (
                 <div className="doctor-panel">
-                    <h3>Doctor Dashboard</h3>
-                    <p>Manage appointments and availability here.</p>
-                    {/* Availability Scheduler will go here */}
+                    <h2>Doctor Dashboard</h2>
+                    <div className="panel-section">
+                        <AppointmentList />
+                    </div>
+                    <div className="panel-section">
+                        <p>Manage appointments and availability here.</p>
+                        <DoctorAvailability />
+                    </div>
                 </div>
             )}
 
             {user.role === 'patient' && (
                 <div className="patient-panel">
-                    <h3>Patient Dashboard</h3>
-                    <p>Book appointments and view history here.</p>
-                    {/* Doctor Search will go here */}
+                    <h2>Patient Dashboard</h2>
+                    <div className="panel-section">
+                        <AppointmentList />
+                    </div>
+                    <div className="panel-section">
+                        <p>Book appointments and view history here.</p>
+                        <PatientDoctorList />
+                    </div>
                 </div>
             )}
         </div>

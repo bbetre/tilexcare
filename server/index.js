@@ -7,6 +7,10 @@ const { syncDatabase } = require('./models');
 
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const doctorRoutes = require('./routes/doctorRoutes');
+const appointmentRoutes = require('./routes/appointmentRoutes');
+const zoomRoutes = require('./routes/zoomRoutes');
+const consultationRoutes = require('./routes/consultationRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +23,10 @@ app.use(express.json());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/doctors', doctorRoutes);
+app.use('/appointments', appointmentRoutes);
+app.use('/zoom', zoomRoutes);
+app.use('/consultations', consultationRoutes);
 
 // Basic Health Check
 app.get('/', (req, res) => {
