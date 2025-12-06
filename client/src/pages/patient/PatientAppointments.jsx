@@ -7,66 +7,12 @@ import {
   X,
   FileText,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal } from '../../components/ui';
-
-// Mock data - replace with API calls
-const mockAppointments = [
-  {
-    id: '1',
-    doctorName: 'Dr. Abebe Kebede',
-    specialty: 'General Practitioner',
-    date: '2025-12-06',
-    time: '10:00 AM',
-    status: 'confirmed',
-    paymentStatus: 'paid',
-    fee: 400
-  },
-  {
-    id: '2',
-    doctorName: 'Dr. Sara Haile',
-    specialty: 'Dermatologist',
-    date: '2025-12-08',
-    time: '02:30 PM',
-    status: 'pending',
-    paymentStatus: 'pending',
-    fee: 500
-  },
-  {
-    id: '3',
-    doctorName: 'Dr. Yonas Tesfaye',
-    specialty: 'Pediatrician',
-    date: '2025-11-28',
-    time: '11:00 AM',
-    status: 'completed',
-    paymentStatus: 'paid',
-    fee: 450,
-    hasPrescription: true
-  },
-  {
-    id: '4',
-    doctorName: 'Dr. Meron Alemu',
-    specialty: 'Cardiologist',
-    date: '2025-11-20',
-    time: '03:00 PM',
-    status: 'completed',
-    paymentStatus: 'paid',
-    fee: 600,
-    hasPrescription: true
-  },
-  {
-    id: '5',
-    doctorName: 'Dr. Tigist Bekele',
-    specialty: 'Gynecologist',
-    date: '2025-11-15',
-    time: '09:30 AM',
-    status: 'cancelled',
-    paymentStatus: 'refunded',
-    fee: 550
-  }
-];
+import { appointmentsAPI } from '../../services/api';
 
 const statusConfig = {
   confirmed: { label: 'Confirmed', variant: 'success' },
@@ -77,14 +23,57 @@ const statusConfig = {
 
 export default function PatientAppointments() {
   const navigate = useNavigate();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
-  const filteredAppointments = mockAppointments.filter((apt) => {
+  // Fetch appointments on mount
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const data = await appointmentsAPI.getMyAppointments();
+        // Transform data to match expected format
+        const transformed = data.map(apt => ({
+          id: apt.id,
+          doctorName: apt.DoctorProfile?.fullName || 'Unknown Doctor',
+          specialty: apt.DoctorProfile?.specialization || 'General',
+          date: apt.Availability?.date || '',
+          time: apt.Availability?.startTime || '',
+          endTime: apt.Availability?.endTime || '',
+          status: apt.status,
+          paymentStatus: apt.paymentStatus,
+          fee: apt.DoctorProfile?.consultationFee || 500
+        }));
+        setAppointments(transformed);
+      } catch (err) {
+        console.error('Error fetching appointments:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAppointments();
+  }, []);
+
+  // Format time for display
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const filteredAppointments = appointments.filter((apt) => {
     if (activeTab === 'upcoming') {
       return apt.date >= today && apt.status !== 'cancelled';
     } else if (activeTab === 'past') {
@@ -100,17 +89,54 @@ export default function PatientAppointments() {
     setShowCancelModal(true);
   };
 
-  const handleConfirmCancel = () => {
-    // In real app, call API to cancel
-    console.log('Cancelling appointment:', appointmentToCancel?.id);
-    setShowCancelModal(false);
-    setAppointmentToCancel(null);
+  const handleConfirmCancel = async () => {
+    if (!appointmentToCancel) return;
+    
+    try {
+      setCancelLoading(true);
+      await appointmentsAPI.cancel(appointmentToCancel.id);
+      // Update local state
+      setAppointments(prev => prev.map(apt => 
+        apt.id === appointmentToCancel.id ? { ...apt, status: 'cancelled' } : apt
+      ));
+      setShowCancelModal(false);
+      setAppointmentToCancel(null);
+    } catch (err) {
+      console.error('Error cancelling appointment:', err);
+      alert(err.message || 'Failed to cancel appointment');
+    } finally {
+      setCancelLoading(false);
+    }
   };
 
   const isJoinable = (appointment) => {
-    // In real app, check if within 15 min of appointment time
+    // Check if within 15 min of appointment time
     return appointment.status === 'confirmed' && appointment.date === today;
   };
+
+  if (loading) {
+    return (
+      <PatientLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </PatientLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PatientLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout>
@@ -183,7 +209,7 @@ export default function PatientAppointments() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        {appointment.time}
+                        {formatTime(appointment.time)}
                       </span>
                       <span className="font-medium text-primary-600">
                         {appointment.fee} ETB

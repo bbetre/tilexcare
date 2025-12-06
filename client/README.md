@@ -138,3 +138,60 @@ src/
 
 ### Shared
 - `/room/:id` - Video consultation room (patient & doctor)
+
+## API Integration
+
+The frontend is fully integrated with the backend REST API. All mock data has been replaced with real API calls.
+
+### API Service Layer (`/src/services/api.js`)
+
+Centralized API service with the following modules:
+
+| Module | Endpoints | Description |
+|--------|-----------|-------------|
+| `authAPI` | login, register | Authentication |
+| `dashboardAPI` | getPatientDashboard, getDoctorDashboard, getAdminDashboard | Role-specific dashboard data |
+| `doctorsAPI` | getAll, getById, getAvailability, setAvailability | Doctor management |
+| `appointmentsAPI` | getMyAppointments, book, cancel, getById | Appointment booking & management |
+| `consultationsAPI` | save, get | Consultation notes & data |
+| `prescriptionsAPI` | getMyPrescriptions, getById, create | Prescription management |
+| `adminAPI` | getPendingDoctors, verifyDoctor, getAllUsers | Admin operations |
+| `earningsAPI` | getSummary, getTransactions, getByPeriod | Doctor earnings tracking |
+| `zoomAPI` | getSignature | Video call authentication |
+
+### Connected Pages
+
+All major pages now fetch real data from the backend:
+
+- **Patient Dashboard** - Next appointment, doctors list, recent consultations
+- **Book Appointment** - Real doctor list with availability slots
+- **Patient Appointments** - Real appointment history with cancel functionality
+- **Doctor Dashboard** - Today's appointments, earnings, prescriptions
+- **Doctor Appointments** - Real appointment management
+- **Doctor Availability** - Set and save availability slots to database
+- **Doctor Earnings** - Real earnings summary and transaction history
+- **Admin Dashboard** - Platform stats, pending verifications, activity
+
+### Error Handling
+
+All API-connected pages include:
+- Loading states with spinner
+- Error states with retry button
+- Empty states when no data available
+
+## Demo Accounts
+
+Run `npm run seed` in the server directory to create example accounts:
+
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | admin@tilexcare.com | password123 |
+| **Patient** | patient@tilexcare.com | password123 |
+| **Verified Doctor** | doctor@tilexcare.com | password123 |
+| **Pending Doctor** | pending.doctor@tilexcare.com | password123 |
+
+### Account Features
+- **Admin**: Full platform access, doctor verification, analytics
+- **Patient**: Book appointments, view prescriptions, join video calls
+- **Verified Doctor**: Manage appointments, set availability, view earnings
+- **Pending Doctor**: Awaiting verification (for testing admin verification flow)

@@ -26,8 +26,11 @@ import {
   AdminDashboard,
   AdminVerification,
   AdminUsers,
+  AdminAppointments,
   AdminPayments,
-  AdminAnalytics
+  AdminSupport,
+  AdminAnalytics,
+  AdminSettings
 } from './pages/admin';
 
 import './App.css';
@@ -147,14 +150,29 @@ function App() {
             <AdminUsers />
           </ProtectedRoute>
         } />
+        <Route path="/admin/appointments" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminAppointments />
+          </ProtectedRoute>
+        } />
         <Route path="/admin/payments" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminPayments />
           </ProtectedRoute>
         } />
+        <Route path="/admin/support" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminSupport />
+          </ProtectedRoute>
+        } />
         <Route path="/admin/analytics" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminAnalytics />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminSettings />
           </ProtectedRoute>
         } />
 

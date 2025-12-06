@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -7,34 +7,13 @@ import {
   Download,
   CreditCard,
   Building,
-  ChevronDown
+  ChevronDown,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
 import { Card, Button, Badge, Select } from '../../components/ui';
-
-// Mock data
-const mockEarnings = {
-  balance: 12500,
-  thisMonth: 18000,
-  lastMonth: 15500,
-  totalEarnings: 156000,
-  pendingPayout: 8500
-};
-
-const mockPayoutHistory = [
-  { id: '1', amount: 15000, date: '2025-11-28', status: 'completed', method: 'Chapa' },
-  { id: '2', amount: 12000, date: '2025-11-15', status: 'completed', method: 'Bank Transfer' },
-  { id: '3', amount: 18000, date: '2025-10-30', status: 'completed', method: 'Chapa' },
-  { id: '4', amount: 14500, date: '2025-10-15', status: 'completed', method: 'Bank Transfer' },
-];
-
-const mockTransactions = [
-  { id: '1', patient: 'Betre Hailu', date: '2025-12-05', amount: 500, status: 'completed' },
-  { id: '2', patient: 'Sara Tesfaye', date: '2025-12-05', amount: 500, status: 'completed' },
-  { id: '3', patient: 'Yonas Bekele', date: '2025-12-04', amount: 500, status: 'completed' },
-  { id: '4', patient: 'Meron Alemu', date: '2025-12-04', amount: 500, status: 'pending' },
-  { id: '5', patient: 'Tigist Haile', date: '2025-12-03', amount: 500, status: 'completed' },
-];
+import { earningsAPI } from '../../services/api';
 
 // Simple bar chart component
 const SimpleBarChart = ({ data }) => {
@@ -57,19 +36,84 @@ const SimpleBarChart = ({ data }) => {
 export default function DoctorEarnings() {
   const [period, setPeriod] = useState('month');
   const [payoutMethod, setPayoutMethod] = useState('chapa');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [earningsData, setEarningsData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
-  const weeklyData = [
-    { label: 'Mon', value: 2500 },
-    { label: 'Tue', value: 3000 },
-    { label: 'Wed', value: 2000 },
-    { label: 'Thu', value: 3500 },
-    { label: 'Fri', value: 4000 },
-    { label: 'Sat', value: 1500 },
-    { label: 'Sun', value: 1500 },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [summary, txData, periodData] = await Promise.all([
+          earningsAPI.getSummary(),
+          earningsAPI.getTransactions(1, 10),
+          earningsAPI.getByPeriod(period)
+        ]);
+        setEarningsData(summary);
+        setTransactions(txData.transactions || []);
+        
+        // Transform period data for chart
+        if (periodData && periodData.length > 0) {
+          const transformed = periodData.map(item => ({
+            label: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
+            value: parseFloat(item.earnings) || 0
+          }));
+          setChartData(transformed);
+        } else {
+          // Default empty chart data
+          setChartData([
+            { label: 'Mon', value: 0 },
+            { label: 'Tue', value: 0 },
+            { label: 'Wed', value: 0 },
+            { label: 'Thu', value: 0 },
+            { label: 'Fri', value: 0 },
+            { label: 'Sat', value: 0 },
+            { label: 'Sun', value: 0 },
+          ]);
+        }
+      } catch (err) {
+        console.error('Error fetching earnings:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [period]);
 
-  const monthChange = ((mockEarnings.thisMonth - mockEarnings.lastMonth) / mockEarnings.lastMonth * 100).toFixed(1);
-  const isPositive = parseFloat(monthChange) >= 0;
+  if (loading) {
+    return (
+      <DoctorLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DoctorLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  const earnings = earningsData || {
+    totalEarnings: 0,
+    monthlyEarnings: 0,
+    weeklyEarnings: 0,
+    pendingPayouts: 0,
+    totalConsultations: 0
+  };
 
   return (
     <DoctorLayout>
@@ -90,8 +134,8 @@ export default function DoctorEarnings() {
           <Card className="bg-gradient-to-br from-success-500 to-success-600 text-white border-0">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-success-100 text-sm">Available Balance</p>
-                <p className="text-3xl font-bold mt-1">{mockEarnings.balance.toLocaleString()} ETB</p>
+                <p className="text-success-100 text-sm">This Week</p>
+                <p className="text-3xl font-bold mt-1">{(earnings.weeklyEarnings || 0).toLocaleString()} ETB</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                 <DollarSign className="w-6 h-6" />
@@ -103,10 +147,10 @@ export default function DoctorEarnings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">This Month</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{mockEarnings.thisMonth.toLocaleString()} ETB</p>
-                <div className={`flex items-center gap-1 mt-1 text-sm ${isPositive ? 'text-success-600' : 'text-red-600'}`}>
-                  {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  {monthChange}% vs last month
+                <p className="text-2xl font-bold text-gray-900 mt-1">{(earnings.monthlyEarnings || 0).toLocaleString()} ETB</p>
+                <div className="flex items-center gap-1 mt-1 text-sm text-success-600">
+                  <TrendingUp className="w-4 h-4" />
+                  {earnings.totalConsultations || 0} consultations
                 </div>
               </div>
             </div>
@@ -116,7 +160,7 @@ export default function DoctorEarnings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Total Earnings</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{mockEarnings.totalEarnings.toLocaleString()} ETB</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{(earnings.totalEarnings || 0).toLocaleString()} ETB</p>
                 <p className="text-sm text-gray-400 mt-1">All time</p>
               </div>
             </div>
@@ -126,7 +170,7 @@ export default function DoctorEarnings() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-yellow-700 text-sm">Pending Payout</p>
-                <p className="text-2xl font-bold text-yellow-900 mt-1">{mockEarnings.pendingPayout.toLocaleString()} ETB</p>
+                <p className="text-2xl font-bold text-yellow-900 mt-1">{(earnings.pendingPayouts || 0).toLocaleString()} ETB</p>
                 <p className="text-sm text-yellow-600 mt-1">Processing</p>
               </div>
             </div>
@@ -144,11 +188,11 @@ export default function DoctorEarnings() {
                 <option value="year">This Year</option>
               </Select>
             </div>
-            <SimpleBarChart data={weeklyData} />
+            <SimpleBarChart data={chartData.length > 0 ? chartData : [{ label: '-', value: 0 }]} />
             <div className="mt-4 pt-4 border-t flex items-center justify-between text-sm">
-              <span className="text-gray-500">Total this week</span>
+              <span className="text-gray-500">Total this {period}</span>
               <span className="font-semibold text-gray-900">
-                {weeklyData.reduce((sum, d) => sum + d.value, 0).toLocaleString()} ETB
+                {chartData.reduce((sum, d) => sum + d.value, 0).toLocaleString()} ETB
               </span>
             </div>
           </Card>
@@ -159,7 +203,7 @@ export default function DoctorEarnings() {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-500">Available for withdrawal</p>
-                <p className="text-2xl font-bold text-gray-900">{mockEarnings.balance.toLocaleString()} ETB</p>
+                <p className="text-2xl font-bold text-gray-900">{(earnings.totalEarnings - earnings.pendingPayouts || 0).toLocaleString()} ETB</p>
               </div>
 
               <div>
@@ -196,7 +240,7 @@ export default function DoctorEarnings() {
                 </div>
               </div>
 
-              <Button className="w-full" disabled={mockEarnings.balance === 0}>
+              <Button className="w-full" disabled={(earnings.totalEarnings - earnings.pendingPayouts) <= 0}>
                 Request Payout
               </Button>
             </div>
@@ -207,50 +251,72 @@ export default function DoctorEarnings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Payout History */}
           <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Payout History</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Consultation Summary</h2>
             <div className="space-y-3">
-              {mockPayoutHistory.map((payout) => (
-                <div key={payout.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-success-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{payout.amount.toLocaleString()} ETB</p>
-                      <p className="text-sm text-gray-500">{payout.method}</p>
-                    </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-success-600" />
                   </div>
-                  <div className="text-right">
-                    <Badge variant="success" size="sm">Completed</Badge>
-                    <p className="text-xs text-gray-400 mt-1">{payout.date}</p>
+                  <div>
+                    <p className="font-medium text-gray-900">Total Consultations</p>
+                    <p className="text-sm text-gray-500">All time</p>
                   </div>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">{earnings.totalConsultations || 0}</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Consultation Fee</p>
+                    <p className="text-sm text-gray-500">Per session</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-gray-900">{earnings.consultationFee || 500} ETB</p>
+                </div>
+              </div>
             </div>
           </Card>
 
           {/* Recent Transactions */}
           <Card>
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h2>
-            <div className="space-y-3">
-              {mockTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{tx.patient}</p>
-                    <p className="text-sm text-gray-500">{tx.date}</p>
+            {transactions.length > 0 ? (
+              <div className="space-y-3">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {tx.Appointment?.PatientProfile?.fullName || 'Patient'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {tx.Appointment?.Availability?.date || new Date(tx.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-success-600">+{tx.doctorEarnings || 0} ETB</p>
+                      <Badge 
+                        variant={tx.status === 'completed' ? 'success' : 'warning'} 
+                        size="sm"
+                      >
+                        {tx.status}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-success-600">+{tx.amount} ETB</p>
-                    <Badge 
-                      variant={tx.status === 'completed' ? 'success' : 'warning'} 
-                      size="sm"
-                    >
-                      {tx.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <DollarSign className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                <p>No transactions yet</p>
+              </div>
+            )}
           </Card>
         </div>
       </div>

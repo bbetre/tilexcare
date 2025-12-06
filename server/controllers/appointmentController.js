@@ -95,4 +95,82 @@ const getMyAppointments = async (req, res) => {
     }
 };
 
-module.exports = { bookAppointment, getMyAppointments };
+const cancelAppointment = async (req, res) => {
+    try {
+        const { appointmentId } = req.params;
+        const userId = req.userId;
+        const role = req.userRole;
+
+        const appointment = await Appointment.findByPk(appointmentId, {
+            include: [{ model: Availability }]
+        });
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        // Verify ownership
+        if (role === 'patient') {
+            const patient = await PatientProfile.findOne({ where: { userId } });
+            if (!patient || appointment.patientId !== patient.id) {
+                return res.status(403).json({ message: 'Unauthorized' });
+            }
+        } else if (role === 'doctor') {
+            const doctor = await DoctorProfile.findOne({ where: { userId } });
+            if (!doctor || appointment.doctorId !== doctor.id) {
+                return res.status(403).json({ message: 'Unauthorized' });
+            }
+        }
+
+        // Update appointment status
+        appointment.status = 'cancelled';
+        await appointment.save();
+
+        // Free up the availability slot
+        if (appointment.Availability) {
+            appointment.Availability.isBooked = false;
+            await appointment.Availability.save();
+        }
+
+        res.json({ message: 'Appointment cancelled successfully', appointment });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Admin: Get all appointments
+const getAllAppointments = async (req, res) => {
+    try {
+        const role = req.userRole;
+        
+        if (role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const appointments = await Appointment.findAll({
+            include: [
+                {
+                    model: DoctorProfile,
+                    attributes: ['fullName', 'specialization', 'phone']
+                },
+                {
+                    model: PatientProfile,
+                    attributes: ['fullName', 'phone']
+                },
+                {
+                    model: Availability,
+                    attributes: ['date', 'startTime', 'endTime']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json(appointments);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { bookAppointment, getMyAppointments, cancelAppointment, getAllAppointments };

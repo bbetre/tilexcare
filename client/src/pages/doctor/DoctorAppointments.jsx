@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -7,32 +7,13 @@ import {
   User,
   FileText,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal } from '../../components/ui';
-
-// Mock data
-const mockAppointments = {
-  today: [
-    { id: '1', patientName: 'Betre Hailu', reason: 'Follow-up consultation', time: '10:00 AM', status: 'confirmed', type: 'scheduled' },
-    { id: '2', patientName: 'Sara Tesfaye', reason: 'Headache and fever', time: '10:30 AM', status: 'in-progress', type: 'on-demand' },
-    { id: '3', patientName: 'Yonas Bekele', reason: 'Skin rash', time: '11:00 AM', status: 'confirmed', type: 'scheduled' },
-  ],
-  upcoming: [
-    { id: '4', patientName: 'Meron Alemu', reason: 'General checkup', date: '2025-12-06', time: '09:00 AM', status: 'confirmed', type: 'scheduled' },
-    { id: '5', patientName: 'Tigist Haile', reason: 'Blood pressure check', date: '2025-12-06', time: '10:00 AM', status: 'confirmed', type: 'scheduled' },
-    { id: '6', patientName: 'Dawit Mengistu', reason: 'Diabetes follow-up', date: '2025-12-07', time: '02:00 PM', status: 'pending', type: 'scheduled' },
-  ],
-  completed: [
-    { id: '7', patientName: 'Helen Tadesse', reason: 'Allergic reaction', date: '2025-12-04', time: '03:00 PM', status: 'completed', type: 'on-demand', hasPrescription: true },
-    { id: '8', patientName: 'Abebe Kebede', reason: 'Annual checkup', date: '2025-12-04', time: '11:00 AM', status: 'completed', type: 'scheduled', hasPrescription: true },
-    { id: '9', patientName: 'Lemlem Girma', reason: 'Stomach pain', date: '2025-12-03', time: '04:00 PM', status: 'completed', type: 'scheduled', hasPrescription: false },
-  ],
-  cancelled: [
-    { id: '10', patientName: 'Kidist Alemu', reason: 'Consultation', date: '2025-12-02', time: '09:00 AM', status: 'cancelled', type: 'scheduled' },
-  ]
-};
+import { appointmentsAPI } from '../../services/api';
 
 const statusConfig = {
   confirmed: { label: 'Confirmed', variant: 'success' },
@@ -44,20 +25,100 @@ const statusConfig = {
 
 export default function DoctorAppointments() {
   const navigate = useNavigate();
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('today');
   const [selectedPatient, setSelectedPatient] = useState(null);
 
-  const getAppointments = () => {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Fetch appointments on mount
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const data = await appointmentsAPI.getMyAppointments();
+        // Transform data to match expected format
+        const transformed = data.map(apt => ({
+          id: apt.id,
+          patientName: apt.PatientProfile?.fullName || 'Unknown Patient',
+          reason: 'Consultation',
+          date: apt.Availability?.date || '',
+          time: apt.Availability?.startTime || '',
+          status: apt.status,
+          type: 'scheduled'
+        }));
+        setAppointments(transformed);
+      } catch (err) {
+        console.error('Error fetching appointments:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAppointments();
+  }, []);
+
+  // Format time for display
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // Filter appointments based on tab
+  const getFilteredAppointments = () => {
     switch (activeTab) {
-      case 'today': return mockAppointments.today;
-      case 'upcoming': return mockAppointments.upcoming;
-      case 'completed': return mockAppointments.completed;
-      case 'cancelled': return mockAppointments.cancelled;
-      default: return [];
+      case 'today':
+        return appointments.filter(apt => apt.date === today && apt.status !== 'cancelled' && apt.status !== 'completed');
+      case 'upcoming':
+        return appointments.filter(apt => apt.date > today && apt.status !== 'cancelled');
+      case 'completed':
+        return appointments.filter(apt => apt.status === 'completed');
+      case 'cancelled':
+        return appointments.filter(apt => apt.status === 'cancelled');
+      default:
+        return [];
     }
   };
 
-  const appointments = getAppointments();
+  const filteredAppointments = getFilteredAppointments();
+
+  // Count for tabs
+  const counts = {
+    today: appointments.filter(apt => apt.date === today && apt.status !== 'cancelled' && apt.status !== 'completed').length,
+    upcoming: appointments.filter(apt => apt.date > today && apt.status !== 'cancelled').length,
+    completed: appointments.filter(apt => apt.status === 'completed').length,
+    cancelled: appointments.filter(apt => apt.status === 'cancelled').length
+  };
+
+  if (loading) {
+    return (
+      <DoctorLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DoctorLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout>
@@ -73,10 +134,10 @@ export default function DoctorAppointments() {
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
           {[
-            { id: 'today', label: 'Today', count: mockAppointments.today.length },
-            { id: 'upcoming', label: 'Upcoming', count: mockAppointments.upcoming.length },
-            { id: 'completed', label: 'Completed', count: mockAppointments.completed.length },
-            { id: 'cancelled', label: 'Cancelled', count: mockAppointments.cancelled.length },
+            { id: 'today', label: 'Today', count: counts.today },
+            { id: 'upcoming', label: 'Upcoming', count: counts.upcoming },
+            { id: 'completed', label: 'Completed', count: counts.completed },
+            { id: 'cancelled', label: 'Cancelled', count: counts.cancelled },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -99,14 +160,14 @@ export default function DoctorAppointments() {
 
         {/* Appointments List */}
         <div className="space-y-4">
-          {appointments.length === 0 ? (
+          {filteredAppointments.length === 0 ? (
             <Card className="text-center py-12">
               <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900">No {activeTab} appointments</h3>
               <p className="text-gray-500 mt-1">Your {activeTab} appointments will appear here</p>
             </Card>
           ) : (
-            appointments.map((apt) => (
+            filteredAppointments.map((apt) => (
               <Card key={apt.id} className="hover:shadow-md transition-shadow">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <Avatar name={apt.patientName} size="lg" />
@@ -132,7 +193,7 @@ export default function DoctorAppointments() {
                       )}
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
-                        {apt.time}
+                        {formatTime(apt.time)}
                       </span>
                     </div>
                   </div>

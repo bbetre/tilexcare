@@ -8,42 +8,20 @@ import {
   Star,
   Zap,
   FileText,
-  Activity
+  Activity,
+  Loader2
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge } from '../../components/ui';
-
-// Mock data - replace with API calls
-const mockNextAppointment = {
-  id: '1',
-  doctorName: 'Dr. Abebe Kebede',
-  specialty: 'General Practitioner',
-  date: '2025-12-06',
-  time: '10:00 AM',
-  status: 'confirmed'
-};
-
-const mockOnlineDoctors = [
-  { id: '1', name: 'Dr. Sara Haile', specialty: 'Dermatologist', fee: 500, rating: 4.9, online: true },
-  { id: '2', name: 'Dr. Yonas Tesfaye', specialty: 'Pediatrician', fee: 450, rating: 4.8, online: true },
-];
-
-const mockSpecialists = [
-  { id: '1', name: 'Dr. Abebe Kebede', specialty: 'General Practitioner', fee: 400, rating: 4.9, image: null },
-  { id: '2', name: 'Dr. Sara Haile', specialty: 'Dermatologist', fee: 500, rating: 4.8, image: null },
-  { id: '3', name: 'Dr. Yonas Tesfaye', specialty: 'Pediatrician', fee: 450, rating: 4.7, image: null },
-  { id: '4', name: 'Dr. Meron Alemu', specialty: 'Cardiologist', fee: 600, rating: 4.9, image: null },
-];
-
-const mockRecentConsultations = [
-  { id: '1', doctor: 'Dr. Abebe Kebede', date: '2025-11-28', diagnosis: 'Common Cold', hasPrescription: true },
-  { id: '2', doctor: 'Dr. Sara Haile', date: '2025-11-20', diagnosis: 'Skin Allergy', hasPrescription: true },
-  { id: '3', doctor: 'Dr. Yonas Tesfaye', date: '2025-11-15', diagnosis: 'Routine Checkup', hasPrescription: false },
-];
+import { dashboardAPI, doctorsAPI } from '../../services/api';
 
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const [greeting, setGreeting] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [doctors, setDoctors] = useState([]);
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
@@ -51,9 +29,51 @@ export default function PatientDashboard() {
     if (hour < 12) setGreeting('Good morning');
     else if (hour < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
+
+    // Fetch dashboard data
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [dashboard, doctorsList] = await Promise.all([
+          dashboardAPI.getPatientDashboard(),
+          doctorsAPI.getAll()
+        ]);
+        setDashboardData(dashboard);
+        setDoctors(doctorsList.slice(0, 4)); // Show first 4 doctors
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const userName = user.email?.split('@')[0] || 'there';
+  const userName = dashboardData?.patient?.fullName || user.email?.split('@')[0] || 'there';
+  const nextAppointment = dashboardData?.nextAppointment;
+  const recentConsultations = dashboardData?.recentConsultations || [];
+
+  // Format time for display
+  const formatTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  if (loading) {
+    return (
+      <PatientLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout>
@@ -74,38 +94,51 @@ export default function PatientDashboard() {
         {/* Quick Stats / Next Appointment */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Next Appointment Card */}
-          <Card className="lg:col-span-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white border-0">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-primary-100 text-sm">Next Appointment</p>
-                  <h3 className="text-xl font-semibold mt-1">{mockNextAppointment.doctorName}</h3>
-                  <p className="text-primary-100">{mockNextAppointment.specialty}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {mockNextAppointment.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {mockNextAppointment.time}
-                    </span>
+          {nextAppointment ? (
+            <Card className="lg:col-span-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white border-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-primary-100 text-sm">Next Appointment</p>
+                    <h3 className="text-xl font-semibold mt-1">{nextAppointment.doctorName}</h3>
+                    <p className="text-primary-100">{nextAppointment.specialty}</p>
+                    <div className="flex items-center gap-4 mt-2 text-sm">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {nextAppointment.date}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {formatTime(nextAppointment.startTime)}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <Button
+                  variant="secondary"
+                  className="bg-white text-primary-600 hover:bg-primary-50"
+                  icon={Video}
+                  onClick={() => navigate(`/room/${nextAppointment.id}`)}
+                >
+                  Join Call
+                </Button>
               </div>
-              <Button
-                variant="secondary"
-                className="bg-white text-primary-600 hover:bg-primary-50"
-                icon={Video}
-                onClick={() => navigate(`/room/${mockNextAppointment.id}`)}
-              >
-                Join Call
-              </Button>
-            </div>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="lg:col-span-2 bg-gray-50 border-gray-200">
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <Calendar className="w-12 h-12 text-gray-300 mb-3" />
+                <h3 className="font-semibold text-gray-900">No Upcoming Appointments</h3>
+                <p className="text-gray-500 text-sm mt-1">Book an appointment to get started</p>
+                <Button className="mt-4" onClick={() => navigate('/patient/book')}>
+                  Book Now
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {/* On-Demand Widget */}
           <Card className="bg-success-50 border-success-200">
@@ -115,18 +148,18 @@ export default function PatientDashboard() {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">On-Demand Care</h3>
-                <p className="text-sm text-gray-500">{mockOnlineDoctors.length} doctors online</p>
+                <p className="text-sm text-gray-500">{doctors.length} doctors available</p>
               </div>
             </div>
             <div className="space-y-2 mb-4">
-              {mockOnlineDoctors.slice(0, 2).map((doc) => (
+              {doctors.slice(0, 2).map((doc) => (
                 <div key={doc.id} className="flex items-center gap-2">
                   <span className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
-                  <span className="text-sm text-gray-700">{doc.name}</span>
+                  <span className="text-sm text-gray-700">{doc.fullName}</span>
                 </div>
               ))}
             </div>
-            <Button variant="success" size="sm" className="w-full">
+            <Button variant="success" size="sm" className="w-full" onClick={() => navigate('/patient/book')}>
               Get Instant Care
             </Button>
           </Card>
@@ -140,25 +173,34 @@ export default function PatientDashboard() {
               View all <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mockSpecialists.map((doctor) => (
-              <Card key={doctor.id} padding="sm" className="hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex flex-col items-center text-center">
-                  <Avatar name={doctor.name} size="xl" className="mb-3" />
-                  <h3 className="font-medium text-gray-900">{doctor.name}</h3>
-                  <p className="text-sm text-gray-500">{doctor.specialty}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-medium">{doctor.rating}</span>
+          {doctors.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {doctors.map((doctor) => (
+                <Card key={doctor.id} padding="sm" className="hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex flex-col items-center text-center">
+                    <Avatar name={doctor.fullName} size="xl" className="mb-3" />
+                    <h3 className="font-medium text-gray-900">{doctor.fullName}</h3>
+                    <p className="text-sm text-gray-500">{doctor.specialization}</p>
+                    <div className="flex items-center gap-1 mt-2">
+                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                      <span className="text-sm font-medium">4.8</span>
+                    </div>
+                    <p className="text-primary-600 font-semibold mt-2">{doctor.consultationFee || 500} ETB</p>
+                    <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => navigate('/patient/book')}>
+                      View Profile
+                    </Button>
                   </div>
-                  <p className="text-primary-600 font-semibold mt-2">{doctor.fee} ETB</p>
-                  <Button variant="outline" size="sm" className="mt-3 w-full">
-                    View Profile
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="text-center py-8">
+              <p className="text-gray-500">No doctors available at the moment</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate('/patient/book')}>
+                Check Later
+              </Button>
+            </Card>
+          )}
         </div>
 
         {/* Medical Records Preview */}
@@ -174,26 +216,33 @@ export default function PatientDashboard() {
                 View all
               </Link>
             </div>
-            <div className="space-y-3">
-              {mockRecentConsultations.map((consultation) => (
-                <div
-                  key={consultation.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">{consultation.doctor}</p>
-                    <p className="text-sm text-gray-500">{consultation.diagnosis}</p>
-                    <p className="text-xs text-gray-400 mt-1">{consultation.date}</p>
+            {recentConsultations.length > 0 ? (
+              <div className="space-y-3">
+                {recentConsultations.map((consultation) => (
+                  <div
+                    key={consultation.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{consultation.doctor}</p>
+                      <p className="text-sm text-gray-500">{consultation.diagnosis}</p>
+                      <p className="text-xs text-gray-400 mt-1">{consultation.date}</p>
+                    </div>
+                    {consultation.hasPrescription && (
+                      <Badge variant="success" size="sm">
+                        <FileText className="w-3 h-3 mr-1" />
+                        Rx
+                      </Badge>
+                    )}
                   </div>
-                  {consultation.hasPrescription && (
-                    <Badge variant="success" size="sm">
-                      <FileText className="w-3 h-3 mr-1" />
-                      Rx
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                <Activity className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                <p>No consultations yet</p>
+              </div>
+            )}
           </Card>
 
           {/* Quick Actions */}

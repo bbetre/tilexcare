@@ -5,6 +5,8 @@ const DoctorProfile = require('./DoctorProfile');
 const Availability = require('./Availability');
 const Appointment = require('./Appointment');
 const Consultation = require('./Consultation');
+const Transaction = require('./Transaction');
+const Prescription = require('./Prescription');
 
 // Associations
 User.hasOne(PatientProfile, { foreignKey: 'userId' });
@@ -31,6 +33,26 @@ Appointment.belongsTo(Availability, { foreignKey: 'availabilityId' });
 Appointment.hasOne(Consultation, { foreignKey: 'appointmentId' });
 Consultation.belongsTo(Appointment, { foreignKey: 'appointmentId' });
 
+// Transactions
+Appointment.hasOne(Transaction, { foreignKey: 'appointmentId' });
+Transaction.belongsTo(Appointment, { foreignKey: 'appointmentId' });
+
+PatientProfile.hasMany(Transaction, { foreignKey: 'patientId' });
+Transaction.belongsTo(PatientProfile, { foreignKey: 'patientId' });
+
+DoctorProfile.hasMany(Transaction, { foreignKey: 'doctorId' });
+Transaction.belongsTo(DoctorProfile, { foreignKey: 'doctorId' });
+
+// Prescriptions
+Consultation.hasOne(Prescription, { foreignKey: 'consultationId' });
+Prescription.belongsTo(Consultation, { foreignKey: 'consultationId' });
+
+PatientProfile.hasMany(Prescription, { foreignKey: 'patientId' });
+Prescription.belongsTo(PatientProfile, { foreignKey: 'patientId' });
+
+DoctorProfile.hasMany(Prescription, { foreignKey: 'doctorId' });
+Prescription.belongsTo(DoctorProfile, { foreignKey: 'doctorId' });
+
 const syncDatabase = async () => {
     try {
         await sequelize.authenticate();
@@ -50,5 +72,7 @@ module.exports = {
     DoctorProfile,
     Availability,
     Appointment,
-    Consultation
+    Consultation,
+    Transaction,
+    Prescription
 };

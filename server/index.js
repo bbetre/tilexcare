@@ -11,6 +11,10 @@ const doctorRoutes = require('./routes/doctorRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const zoomRoutes = require('./routes/zoomRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const prescriptionRoutes = require('./routes/prescriptionRoutes');
+const earningsRoutes = require('./routes/earningsRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,6 +31,10 @@ app.use('/doctors', doctorRoutes);
 app.use('/appointments', appointmentRoutes);
 app.use('/zoom', zoomRoutes);
 app.use('/consultations', consultationRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/prescriptions', prescriptionRoutes);
+app.use('/earnings', earningsRoutes);
+app.use('/analytics', analyticsRoutes);
 
 // Basic Health Check
 app.get('/', (req, res) => {

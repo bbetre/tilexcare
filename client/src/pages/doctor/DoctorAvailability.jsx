@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Clock,
   Calendar,
@@ -7,10 +7,14 @@ import {
   Save,
   ToggleLeft,
   ToggleRight,
-  DollarSign
+  DollarSign,
+  Loader2,
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
 import { Card, Button, Input, Select, Badge } from '../../components/ui';
+import { doctorsAPI } from '../../services/api';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -33,6 +37,8 @@ export default function DoctorAvailability() {
   const [vacationDates, setVacationDates] = useState([]);
   const [newVacationStart, setNewVacationStart] = useState('');
   const [newVacationEnd, setNewVacationEnd] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const toggleDay = (day) => {
     setSchedule({
@@ -82,10 +88,71 @@ export default function DoctorAvailability() {
     setVacationDates(vacationDates.filter((_, i) => i !== index));
   };
 
-  const handleSave = () => {
-    // In real app, call API to save
-    console.log('Saving availability:', { schedule, consultationFee, onDemandEnabled, slotDuration, breakTime, vacationDates });
-    alert('Availability saved successfully!');
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setSaveSuccess(false);
+      
+      // Generate slots for the next 4 weeks based on schedule
+      const slots = [];
+      const today = new Date();
+      const slotDurationMins = parseInt(slotDuration);
+      const breakMins = parseInt(breakTime);
+      
+      for (let week = 0; week < 4; week++) {
+        daysOfWeek.forEach((day, dayIndex) => {
+          if (!schedule[day].enabled) return;
+          
+          // Calculate the date for this day
+          const currentDayIndex = today.getDay();
+          const targetDayIndex = dayIndex === 6 ? 0 : dayIndex + 1; // Convert to JS day index (0=Sunday)
+          let daysUntil = targetDayIndex - currentDayIndex;
+          if (daysUntil <= 0) daysUntil += 7;
+          daysUntil += week * 7;
+          
+          const date = new Date(today);
+          date.setDate(today.getDate() + daysUntil);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          // Generate individual slots from time ranges
+          schedule[day].slots.forEach(timeRange => {
+            const [startHour, startMin] = timeRange.start.split(':').map(Number);
+            const [endHour, endMin] = timeRange.end.split(':').map(Number);
+            
+            let currentTime = startHour * 60 + startMin;
+            const endTime = endHour * 60 + endMin;
+            
+            while (currentTime + slotDurationMins <= endTime) {
+              const slotStartHour = Math.floor(currentTime / 60);
+              const slotStartMin = currentTime % 60;
+              const slotEndTime = currentTime + slotDurationMins;
+              const slotEndHour = Math.floor(slotEndTime / 60);
+              const slotEndMin = slotEndTime % 60;
+              
+              slots.push({
+                date: dateStr,
+                startTime: `${String(slotStartHour).padStart(2, '0')}:${String(slotStartMin).padStart(2, '0')}`,
+                endTime: `${String(slotEndHour).padStart(2, '0')}:${String(slotEndMin).padStart(2, '0')}`
+              });
+              
+              currentTime = slotEndTime + breakMins;
+            }
+          });
+        });
+      }
+      
+      if (slots.length > 0) {
+        await doctorsAPI.setAvailability(slots);
+      }
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error saving availability:', err);
+      alert(err.message || 'Failed to save availability');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -97,8 +164,8 @@ export default function DoctorAvailability() {
             <h1 className="text-2xl font-bold text-gray-900">Availability Management</h1>
             <p className="text-gray-500 mt-1">Set your working hours and consultation settings</p>
           </div>
-          <Button icon={Save} onClick={handleSave}>
-            Save Changes
+          <Button icon={saving ? Loader2 : saveSuccess ? Check : Save} onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
           </Button>
         </div>
 
