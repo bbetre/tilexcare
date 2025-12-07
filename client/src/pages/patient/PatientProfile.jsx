@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -10,44 +10,131 @@ import {
   Shield,
   Camera,
   Save,
-  Edit2
+  Edit2,
+  Loader2
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Input, Select, Textarea, Badge } from '../../components/ui';
+import { patientsAPI } from '../../services/api';
 
 export default function PatientProfile() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [formData, setFormData] = useState({
-    fullName: 'Betre Hailu',
-    email: user.email || 'betre@example.com',
-    phone: '+251 91 234 5678',
-    dateOfBirth: '1990-05-15',
-    gender: 'male',
-    address: 'Addis Ababa, Ethiopia',
-    emergencyContact: '+251 91 876 5432',
-    bloodType: 'O+',
-    allergies: 'Penicillin, Peanuts',
-    chronicConditions: 'None',
-    currentMedications: 'Vitamin D supplements',
-    previousSurgeries: 'Appendectomy (2015)'
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    dateOfBirth: '',
+    gender: '',
+    address: '',
+    emergencyContact: '',
+    bloodType: '',
+    allergies: '',
+    chronicConditions: '',
+    currentMedications: '',
+    previousSurgeries: ''
   });
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await patientsAPI.getMyProfile();
+        setFormData({
+          fullName: data.fullName || '',
+          email: data.email || user.email || '',
+          phoneNumber: data.phoneNumber || '',
+          dateOfBirth: data.dateOfBirth || '',
+          gender: data.gender || '',
+          address: data.address || '',
+          emergencyContact: data.emergencyContact || '',
+          bloodType: data.bloodType || '',
+          allergies: data.allergies || '',
+          chronicConditions: data.chronicConditions || '',
+          currentMedications: data.currentMedications || '',
+          previousSurgeries: data.previousSurgeries || ''
+        });
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    // In real app, call API to save
-    console.log('Saving profile:', formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      await patientsAPI.updateProfile({
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        address: formData.address,
+        emergencyContact: formData.emergencyContact,
+        bloodType: formData.bloodType,
+        allergies: formData.allergies,
+        chronicConditions: formData.chronicConditions,
+        currentMedications: formData.currentMedications,
+        previousSurgeries: formData.previousSurgeries
+      });
+      
+      setSuccessMessage('Profile updated successfully!');
+      setIsEditing(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      setError('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <PatientLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout>
       <div className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -60,11 +147,11 @@ export default function PatientProfile() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setIsEditing(false)}>
+              <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={saving}>
                 Cancel
               </Button>
-              <Button icon={Save} onClick={handleSave}>
-                Save Changes
+              <Button icon={saving ? Loader2 : Save} onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           )}
@@ -82,7 +169,7 @@ export default function PatientProfile() {
               )}
             </div>
             <div className="text-center sm:text-left">
-              <h2 className="text-xl font-semibold text-gray-900">{formData.fullName}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{formData.fullName || 'Patient'}</h2>
               <p className="text-gray-500">{formData.email}</p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
                 <Badge variant="primary">Patient</Badge>
@@ -133,16 +220,18 @@ export default function PatientProfile() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                disabled={!isEditing}
+                disabled={true}
                 icon={Mail}
+                helperText="Email cannot be changed"
               />
               <Input
                 label="Phone Number"
-                name="phone"
-                value={formData.phone}
+                name="phoneNumber"
+                value={formData.phoneNumber}
                 onChange={handleChange}
                 disabled={!isEditing}
                 icon={Phone}
+                placeholder="+251 91 234 5678"
               />
               <Input
                 label="Date of Birth"

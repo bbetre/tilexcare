@@ -13,11 +13,20 @@ import {
   CreditCard,
   Check,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Award,
+  Building,
+  Globe,
+  Video,
+  Zap,
+  GraduationCap,
+  Mail,
+  Phone,
+  User
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal, Input, Select } from '../../components/ui';
-import { doctorsAPI, appointmentsAPI } from '../../services/api';
+import { doctorsAPI, appointmentsAPI, ratingsAPI } from '../../services/api';
 
 const specialties = [
   'All Specialties',
@@ -52,12 +61,16 @@ export default function BookAppointment() {
   const [bookingStep, setBookingStep] = useState(1); // 1: select time, 2: payment, 3: confirmation
   const [bookingLoading, setBookingLoading] = useState(false);
 
-  // Fetch doctors on mount
+  // Doctor profile modal state
+  const [profileDoctor, setProfileDoctor] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+
+  // Fetch doctors on mount with real ratings
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
         setLoading(true);
-        const data = await doctorsAPI.getAll();
+        const data = await ratingsAPI.getDoctorsWithRatings();
         setDoctors(data);
       } catch (err) {
         console.error('Error fetching doctors:', err);
@@ -147,6 +160,37 @@ export default function BookAppointment() {
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  // View doctor profile
+  const handleViewProfile = async (doctor) => {
+    try {
+      setLoadingProfile(true);
+      const profileData = await ratingsAPI.getDoctorProfile(doctor.id);
+      setProfileDoctor(profileData);
+    } catch (err) {
+      console.error('Error fetching doctor profile:', err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // Render star rating
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push(<Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />);
+      } else if (i === fullStars && hasHalfStar) {
+        stars.push(<Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400 opacity-50" />);
+      } else {
+        stars.push(<Star key={i} className="w-4 h-4 text-gray-300" />);
+      }
+    }
+    return stars;
   };
 
   if (loading) {
@@ -287,13 +331,22 @@ export default function BookAppointment() {
           {filteredDoctors.map((doctor) => (
             <Card key={doctor.id} className="hover:shadow-md transition-shadow">
               <div className="flex gap-4">
-                <div className="relative">
-                  <Avatar name={doctor.fullName} size="xl" />
+                <div 
+                  className="relative cursor-pointer" 
+                  onClick={() => handleViewProfile(doctor)}
+                  title="View Profile"
+                >
+                  <Avatar name={doctor.fullName} size="xl" className="hover:ring-2 hover:ring-primary-300 transition-all" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900">{doctor.fullName}</h3>
+                      <h3 
+                        className="font-semibold text-gray-900 cursor-pointer hover:text-primary-600 transition-colors"
+                        onClick={() => handleViewProfile(doctor)}
+                      >
+                        {doctor.fullName}
+                      </h3>
                       <p className="text-sm text-gray-500">{doctor.specialization}</p>
                     </div>
                     <Badge variant="success" size="sm">Verified</Badge>
@@ -302,7 +355,8 @@ export default function BookAppointment() {
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      4.8
+                      {doctor.rating || '0.0'}
+                      <span className="text-xs text-gray-400">({doctor.reviewCount || 0})</span>
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
@@ -497,6 +551,225 @@ export default function BookAppointment() {
                 <p className="text-sm text-gray-400 mt-4">Redirecting to appointments...</p>
               </div>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Doctor Profile Modal */}
+      <Modal
+        isOpen={!!profileDoctor || loadingProfile}
+        onClose={() => setProfileDoctor(null)}
+        title={profileDoctor?.doctor?.fullName || 'Doctor Profile'}
+        size="lg"
+      >
+        {loadingProfile ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+          </div>
+        ) : profileDoctor && (
+          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            {/* Doctor Header */}
+            <div className="flex items-start gap-4 p-4 bg-gradient-to-r from-primary-50 to-primary-100 rounded-lg">
+              <Avatar name={profileDoctor.doctor.fullName} size="xl" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold text-gray-900">{profileDoctor.doctor.fullName}</h3>
+                  <Badge variant="success">Verified</Badge>
+                </div>
+                <p className="text-primary-600 font-medium">{profileDoctor.doctor.specialization}</p>
+                {profileDoctor.doctor.hospitalAffiliation && (
+                  <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+                    <Building className="w-4 h-4" />
+                    {profileDoctor.doctor.hospitalAffiliation}
+                  </p>
+                )}
+                <p className="text-lg font-semibold text-primary-600 mt-2">
+                  {profileDoctor.doctor.consultationFee || 500} ETB / consultation
+                </p>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <User className="w-4 h-4 text-blue-500" />
+                Contact Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-600">Full Name:</span>
+                  <span className="font-medium text-gray-900">{profileDoctor.doctor.fullName}</span>
+                </div>
+                {profileDoctor.doctor.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">Email:</span>
+                    <a href={`mailto:${profileDoctor.doctor.email}`} className="font-medium text-primary-600 hover:underline">
+                      {profileDoctor.doctor.email}
+                    </a>
+                  </div>
+                )}
+                {profileDoctor.doctor.phoneNumber && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600">Phone:</span>
+                    <a href={`tel:${profileDoctor.doctor.phoneNumber}`} className="font-medium text-primary-600 hover:underline">
+                      {profileDoctor.doctor.phoneNumber}
+                    </a>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-sm">
+                  <Award className="w-4 h-4 text-gray-500" />
+                  <span className="text-gray-600">Specialization:</span>
+                  <span className="font-medium text-gray-900">{profileDoctor.doctor.specialization}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-yellow-50 rounded-lg text-center">
+                <div className="flex items-center justify-center gap-1">
+                  <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                  <span className="text-xl font-bold text-gray-900">{profileDoctor.stats.averageRating}</span>
+                </div>
+                <p className="text-xs text-gray-600">{profileDoctor.stats.totalRatings} reviews</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg text-center">
+                <p className="text-xl font-bold text-blue-600">{profileDoctor.stats.completedAppointments}</p>
+                <p className="text-xs text-gray-600">Consultations</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-lg text-center">
+                <p className="text-xl font-bold text-green-600">{profileDoctor.doctor.yearsOfExperience || '5'}+</p>
+                <p className="text-xs text-gray-600">Years Exp.</p>
+              </div>
+            </div>
+
+            {/* Biography */}
+            {profileDoctor.doctor.bio && (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Biography</h4>
+                <p className="text-sm text-gray-600">{profileDoctor.doctor.bio}</p>
+              </div>
+            )}
+
+            {/* Qualifications & Education */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {profileDoctor.doctor.qualifications && profileDoctor.doctor.qualifications.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-primary-500" />
+                    Qualifications
+                  </h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {profileDoctor.doctor.qualifications.map((q, i) => (
+                      <li key={i}>• {q}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {profileDoctor.doctor.education && profileDoctor.doctor.education.length > 0 && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-primary-500" />
+                    Education
+                  </h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {profileDoctor.doctor.education.map((e, i) => (
+                      <li key={i}>• {e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Info */}
+            <div className="flex flex-wrap gap-2">
+              {profileDoctor.doctor.languages && profileDoctor.doctor.languages.length > 0 && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-sm">
+                  <Globe className="w-4 h-4 text-gray-500" />
+                  {profileDoctor.doctor.languages.join(', ')}
+                </div>
+              )}
+              {profileDoctor.doctor.consultationTypes && profileDoctor.doctor.consultationTypes.includes('video') && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                  <Video className="w-4 h-4" />
+                  Video Consultation
+                </div>
+              )}
+              {profileDoctor.doctor.availableForEmergency && (
+                <div className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+                  <Zap className="w-4 h-4" />
+                  Emergency Available
+                </div>
+              )}
+            </div>
+
+            {/* Rating Distribution */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3">Rating Distribution</h4>
+              <div className="space-y-1">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = profileDoctor.stats.ratingDistribution[star] || 0;
+                  const percentage = profileDoctor.stats.totalRatings > 0 
+                    ? (count / profileDoctor.stats.totalRatings) * 100 
+                    : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2 text-sm">
+                      <span className="w-3">{star}</span>
+                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-yellow-400 rounded-full"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-gray-500">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent Reviews */}
+            {profileDoctor.recentReviews.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Recent Reviews</h4>
+                <div className="space-y-3">
+                  {profileDoctor.recentReviews.map((review) => (
+                    <div key={review.id} className="p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-gray-900">{review.patientName}</span>
+                        <div className="flex items-center gap-0.5">
+                          {renderStars(review.rating)}
+                        </div>
+                      </div>
+                      {review.review && (
+                        <p className="text-sm text-gray-600">{review.review}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t sticky bottom-0 bg-white">
+              <Button variant="outline" className="flex-1" onClick={() => setProfileDoctor(null)}>
+                Close
+              </Button>
+              <Button className="flex-1" onClick={() => {
+                setProfileDoctor(null);
+                handleBookClick(profileDoctor.doctor);
+              }}>
+                Book Appointment
+              </Button>
+            </div>
           </div>
         )}
       </Modal>

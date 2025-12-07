@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FileText,
   Download,
@@ -6,59 +6,41 @@ import {
   Calendar,
   Pill,
   User,
-  Eye
+  Eye,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal, Input } from '../../components/ui';
-
-// Mock data
-const mockPrescriptions = [
-  {
-    id: '1',
-    doctorName: 'Dr. Abebe Kebede',
-    specialty: 'General Practitioner',
-    date: '2025-11-28',
-    diagnosis: 'Common Cold',
-    medications: [
-      { name: 'Paracetamol 500mg', dosage: '1 tablet', frequency: '3 times daily', duration: '5 days' },
-      { name: 'Vitamin C 1000mg', dosage: '1 tablet', frequency: 'Once daily', duration: '10 days' }
-    ],
-    notes: 'Rest well and drink plenty of fluids. Return if symptoms persist after 5 days.'
-  },
-  {
-    id: '2',
-    doctorName: 'Dr. Sara Haile',
-    specialty: 'Dermatologist',
-    date: '2025-11-20',
-    diagnosis: 'Skin Allergy',
-    medications: [
-      { name: 'Cetirizine 10mg', dosage: '1 tablet', frequency: 'Once daily at night', duration: '7 days' },
-      { name: 'Hydrocortisone Cream 1%', dosage: 'Apply thin layer', frequency: 'Twice daily', duration: '5 days' }
-    ],
-    notes: 'Avoid known allergens. Keep affected area clean and dry.'
-  },
-  {
-    id: '3',
-    doctorName: 'Dr. Meron Alemu',
-    specialty: 'Cardiologist',
-    date: '2025-11-15',
-    diagnosis: 'Hypertension',
-    medications: [
-      { name: 'Amlodipine 5mg', dosage: '1 tablet', frequency: 'Once daily', duration: '30 days' },
-      { name: 'Aspirin 75mg', dosage: '1 tablet', frequency: 'Once daily', duration: '30 days' }
-    ],
-    notes: 'Monitor blood pressure daily. Reduce salt intake. Follow up in 1 month.'
-  }
-];
+import { prescriptionsAPI } from '../../services/api';
 
 export default function Prescriptions() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [prescriptions, setPrescriptions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPrescription, setSelectedPrescription] = useState(null);
 
-  const filteredPrescriptions = mockPrescriptions.filter((rx) =>
-    rx.doctorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rx.diagnosis.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rx.medications.some(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const data = await prescriptionsAPI.getMyPrescriptions();
+        setPrescriptions(data || []);
+      } catch (err) {
+        console.error('Error fetching prescriptions:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const filteredPrescriptions = prescriptions.filter((rx) =>
+    rx.doctorName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rx.diagnosis?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rx.medications?.some(m => m.name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleDownload = (prescription) => {
@@ -66,6 +48,30 @@ export default function Prescriptions() {
     console.log('Downloading prescription:', prescription.id);
     alert('Prescription PDF downloaded!');
   };
+
+  if (loading) {
+    return (
+      <PatientLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </PatientLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PatientLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </PatientLayout>
+    );
+  }
 
   return (
     <PatientLayout>
