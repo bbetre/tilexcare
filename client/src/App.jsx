@@ -9,7 +9,8 @@ import {
   BookAppointment,
   PatientAppointments,
   Prescriptions,
-  PatientProfile
+  PatientProfile,
+  PatientSupport
 } from './pages/patient';
 
 // Doctor Pages
@@ -18,7 +19,10 @@ import {
   DoctorAppointments,
   DoctorAvailability,
   DoctorEarnings,
-  DoctorProfile
+  DoctorProfile,
+  DoctorPatients,
+  DoctorPrescriptions,
+  DoctorSupport
 } from './pages/doctor';
 
 // Admin Pages
@@ -106,6 +110,11 @@ function App() {
             <PatientProfile />
           </ProtectedRoute>
         } />
+        <Route path="/patient/support" element={
+          <ProtectedRoute allowedRoles={['patient']}>
+            <PatientSupport />
+          </ProtectedRoute>
+        } />
 
         {/* Doctor Routes */}
         <Route path="/doctor" element={
@@ -131,6 +140,21 @@ function App() {
         <Route path="/doctor/profile" element={
           <ProtectedRoute allowedRoles={['doctor']}>
             <DoctorProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/patients" element={
+          <ProtectedRoute allowedRoles={['doctor']}>
+            <DoctorPatients />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/prescriptions" element={
+          <ProtectedRoute allowedRoles={['doctor']}>
+            <DoctorPrescriptions />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/support" element={
+          <ProtectedRoute allowedRoles={['doctor']}>
+            <DoctorSupport />
           </ProtectedRoute>
         } />
 

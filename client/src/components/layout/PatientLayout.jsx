@@ -21,7 +21,6 @@ const navigation = [
   { name: 'Book Appointment', href: '/patient/book', icon: Calendar },
   { name: 'My Appointments', href: '/patient/appointments', icon: CalendarCheck },
   { name: 'Prescriptions', href: '/patient/prescriptions', icon: FileText },
-  { name: 'Profile', href: '/patient/profile', icon: User },
   { name: 'Support', href: '/patient/support', icon: HelpCircle },
 ];
 
@@ -72,24 +71,30 @@ export default function PatientLayout({ children }) {
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               {/* Notifications */}
               <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5 text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
-              {/* Profile */}
-              <div className="hidden md:flex items-center gap-3">
-                <Avatar name={user.email || 'User'} size="sm" />
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  title="Logout"
-                >
-                  <LogOut className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
+              {/* Profile Icon */}
+              <Link
+                to="/patient/profile"
+                className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="My Profile"
+              >
+                <User className="w-5 h-5 text-gray-600" />
+              </Link>
+
+              {/* Logout */}
+              <button
+                onClick={handleLogout}
+                className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5 text-gray-600" />
+              </button>
 
               {/* Mobile menu button */}
               <button
