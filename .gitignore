@@ -5,5 +5,13 @@ dist/
 build/
 .idea/
 .vscode/
+.windsurf/
 coverage/
 *.log
+
+# Project documentation (not for repo)
+tilexcare_PRD.md
+steps.md
+
+# Codeium
+.codeiumignore
