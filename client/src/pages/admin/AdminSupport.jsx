@@ -14,36 +14,9 @@ import {
 import { AdminLayout } from '../../components/layout';
 import { Card, Button, Badge, Avatar, Input, Select } from '../../components/ui';
 
-// Placeholder support tickets - in production, these would come from an API
-const mockTickets = [
-  {
-    id: '1',
-    subject: 'Unable to book appointment',
-    user: { name: 'Betre Hailu', email: 'betre@example.com', role: 'patient' },
-    status: 'open',
-    priority: 'high',
-    createdAt: '2025-12-06T10:30:00',
-    lastMessage: 'I keep getting an error when trying to book with Dr. Abebe...'
-  },
-  {
-    id: '2',
-    subject: 'Payment not reflecting',
-    user: { name: 'Sara Tesfaye', email: 'sara@example.com', role: 'patient' },
-    status: 'in_progress',
-    priority: 'medium',
-    createdAt: '2025-12-05T14:20:00',
-    lastMessage: 'I made a payment yesterday but it still shows pending...'
-  },
-  {
-    id: '3',
-    subject: 'Verification documents',
-    user: { name: 'Dr. Yonas Bekele', email: 'yonas@example.com', role: 'doctor' },
-    status: 'resolved',
-    priority: 'low',
-    createdAt: '2025-12-04T09:15:00',
-    lastMessage: 'Thank you for approving my verification!'
-  }
-];
+// Support tickets - placeholder until support system is implemented
+// In production, these would come from a support tickets API
+const tickets = [];
 
 export default function AdminSupport() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,10 +24,10 @@ export default function AdminSupport() {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
 
-  const filteredTickets = mockTickets.filter(ticket => {
+  const filteredTickets = tickets.filter(ticket => {
     const matchesSearch = 
-      ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.user.name.toLowerCase().includes(searchQuery.toLowerCase());
+      ticket.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.user?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -81,10 +54,10 @@ export default function AdminSupport() {
   };
 
   const stats = {
-    total: mockTickets.length,
-    open: mockTickets.filter(t => t.status === 'open').length,
-    inProgress: mockTickets.filter(t => t.status === 'in_progress').length,
-    resolved: mockTickets.filter(t => t.status === 'resolved').length
+    total: tickets.length,
+    open: tickets.filter(t => t.status === 'open').length,
+    inProgress: tickets.filter(t => t.status === 'in_progress').length,
+    resolved: tickets.filter(t => t.status === 'resolved').length
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users,
   Search,
@@ -8,34 +8,50 @@ import {
   Ban,
   Mail,
   UserCheck,
-  UserX
+  UserX,
+  Loader2,
+  AlertCircle,
+  Trash2,
+  DollarSign,
+  Calendar
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal, Input, Select } from '../../components/ui';
-
-// Mock data
-const mockPatients = [
-  { id: '1', name: 'Betre Hailu', email: 'betre@email.com', phone: '+251 91 234 5678', joinDate: '2025-10-15', appointments: 5, status: 'active' },
-  { id: '2', name: 'Sara Tesfaye', email: 'sara@email.com', phone: '+251 91 876 5432', joinDate: '2025-11-01', appointments: 3, status: 'active' },
-  { id: '3', name: 'Yonas Bekele', email: 'yonas@email.com', phone: '+251 91 345 6789', joinDate: '2025-11-10', appointments: 2, status: 'active' },
-  { id: '4', name: 'Meron Alemu', email: 'meron@email.com', phone: '+251 91 456 7890', joinDate: '2025-11-20', appointments: 1, status: 'suspended' },
-];
-
-const mockDoctors = [
-  { id: '1', name: 'Dr. Abebe Kebede', email: 'abebe@tilexcare.com', specialty: 'General Practitioner', joinDate: '2025-09-01', patients: 45, status: 'active', verified: true },
-  { id: '2', name: 'Dr. Sara Haile', email: 'sara.h@tilexcare.com', specialty: 'Dermatologist', joinDate: '2025-09-15', patients: 38, status: 'active', verified: true },
-  { id: '3', name: 'Dr. Yonas Tesfaye', email: 'yonas.t@tilexcare.com', specialty: 'Pediatrician', joinDate: '2025-10-01', patients: 52, status: 'active', verified: true },
-  { id: '4', name: 'Dr. Meron Alemu', email: 'meron.a@tilexcare.com', specialty: 'Cardiologist', joinDate: '2025-10-15', patients: 30, status: 'inactive', verified: true },
-];
+import { usersAPI } from '../../services/api';
 
 export default function AdminUsers() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  
   const [activeTab, setActiveTab] = useState('patients');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
-  const users = activeTab === 'patients' ? mockPatients : mockDoctors;
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await usersAPI.getAll();
+      setPatients(data.patients || []);
+      setDoctors(data.doctors || []);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const users = activeTab === 'patients' ? patients : doctors;
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -44,15 +60,74 @@ export default function AdminUsers() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleSuspend = (user) => {
-    console.log('Suspending user:', user.id);
-    setShowActionMenu(null);
+  const handleSuspend = async (user) => {
+    try {
+      setActionLoading(true);
+      await usersAPI.suspendUser(user.id, activeTab === 'doctors' ? 'doctor' : 'patient');
+      setShowActionMenu(null);
+      setSelectedUser(null);
+      fetchData();
+    } catch (err) {
+      console.error('Error suspending user:', err);
+      alert('Failed to suspend user');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleActivate = (user) => {
-    console.log('Activating user:', user.id);
-    setShowActionMenu(null);
+  const handleActivate = async (user) => {
+    try {
+      setActionLoading(true);
+      await usersAPI.activateUser(user.id, activeTab === 'doctors' ? 'doctor' : 'patient');
+      setShowActionMenu(null);
+      setSelectedUser(null);
+      fetchData();
+    } catch (err) {
+      console.error('Error activating user:', err);
+      alert('Failed to activate user');
+    } finally {
+      setActionLoading(false);
+    }
   };
+
+  const handleDelete = async (user) => {
+    try {
+      setActionLoading(true);
+      await usersAPI.deleteUser(user.id);
+      setShowDeleteConfirm(null);
+      setSelectedUser(null);
+      fetchData();
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      alert('Failed to delete user');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -66,8 +141,8 @@ export default function AdminUsers() {
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
           {[
-            { id: 'patients', label: 'Patients', count: mockPatients.length },
-            { id: 'doctors', label: 'Doctors', count: mockDoctors.length },
+            { id: 'patients', label: 'Patients', count: patients.length },
+            { id: 'doctors', label: 'Doctors', count: doctors.length },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -278,21 +353,82 @@ export default function AdminUsers() {
             </div>
 
             <div className="flex gap-3 pt-4 border-t">
-              <Button variant="outline" className="flex-1" icon={Mail}>
+              <Button 
+                variant="outline" 
+                className="flex-1" 
+                icon={Mail}
+                onClick={() => window.location.href = `mailto:${selectedUser.email}`}
+              >
                 Send Email
               </Button>
               {selectedUser.status === 'active' ? (
-                <Button variant="danger" className="flex-1" icon={Ban}>
-                  Suspend User
+                <Button 
+                  variant="danger" 
+                  className="flex-1" 
+                  icon={Ban}
+                  onClick={() => handleSuspend(selectedUser)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Suspending...' : 'Suspend User'}
                 </Button>
               ) : (
-                <Button variant="success" className="flex-1" icon={UserCheck}>
-                  Activate User
+                <Button 
+                  variant="success" 
+                  className="flex-1" 
+                  icon={UserCheck}
+                  onClick={() => handleActivate(selectedUser)}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Activating...' : 'Activate User'}
                 </Button>
               )}
             </div>
+            <div className="pt-2">
+              <Button 
+                variant="danger" 
+                className="w-full" 
+                icon={Trash2}
+                onClick={() => setShowDeleteConfirm(selectedUser)}
+              >
+                Delete User Permanently
+              </Button>
+            </div>
           </div>
         )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(null)}
+        title="Confirm Delete"
+      >
+        <div className="space-y-4">
+          <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+            <p className="text-red-800">
+              Are you sure you want to permanently delete <strong>{showDeleteConfirm?.name}</strong>? 
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              className="flex-1" 
+              onClick={() => setShowDeleteConfirm(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="danger" 
+              className="flex-1" 
+              icon={Trash2}
+              onClick={() => handleDelete(showDeleteConfirm)}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </AdminLayout>
   );

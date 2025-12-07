@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   UserCheck,
   FileText,
@@ -10,82 +10,59 @@ import {
   Clock,
   Mail,
   Phone,
-  Award
+  Award,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal, Textarea } from '../../components/ui';
-
-// Mock data
-const mockPendingDoctors = [
-  {
-    id: '1',
-    name: 'Dr. Kidist Alemu',
-    email: 'kidist@email.com',
-    phone: '+251 91 234 5678',
-    specialty: 'Neurologist',
-    experience: '8 years',
-    licenseNumber: 'ETH-MED-2017-5678',
-    submittedDate: '2025-12-04',
-    documents: [
-      { name: 'Medical License', type: 'pdf', url: '#' },
-      { name: 'Board Certification', type: 'pdf', url: '#' },
-      { name: 'ID Document', type: 'image', url: '#' },
-    ],
-    bio: 'Specialized neurologist with expertise in headache disorders and epilepsy management.'
-  },
-  {
-    id: '2',
-    name: 'Dr. Solomon Tadesse',
-    email: 'solomon@email.com',
-    phone: '+251 91 876 5432',
-    specialty: 'Psychiatrist',
-    experience: '12 years',
-    licenseNumber: 'ETH-MED-2013-9012',
-    submittedDate: '2025-12-03',
-    documents: [
-      { name: 'Medical License', type: 'pdf', url: '#' },
-      { name: 'Psychiatry Certification', type: 'pdf', url: '#' },
-    ],
-    bio: 'Experienced psychiatrist focusing on anxiety disorders and depression treatment.'
-  },
-  {
-    id: '3',
-    name: 'Dr. Hana Girma',
-    email: 'hana@email.com',
-    phone: '+251 91 345 6789',
-    specialty: 'Ophthalmologist',
-    experience: '6 years',
-    licenseNumber: 'ETH-MED-2019-3456',
-    submittedDate: '2025-12-02',
-    documents: [
-      { name: 'Medical License', type: 'pdf', url: '#' },
-      { name: 'Ophthalmology Certification', type: 'pdf', url: '#' },
-      { name: 'Fellowship Certificate', type: 'pdf', url: '#' },
-    ],
-    bio: 'Eye care specialist with training in cataract surgery and retinal diseases.'
-  },
-];
-
-const mockVerifiedDoctors = [
-  { id: '4', name: 'Dr. Abebe Kebede', specialty: 'General Practitioner', verifiedDate: '2025-11-28', status: 'verified' },
-  { id: '5', name: 'Dr. Sara Haile', specialty: 'Dermatologist', verifiedDate: '2025-11-25', status: 'verified' },
-];
-
-const mockRejectedDoctors = [
-  { id: '6', name: 'Dr. Test User', specialty: 'Unknown', rejectedDate: '2025-11-20', reason: 'Invalid license number', status: 'rejected' },
-];
+import { usersAPI } from '../../services/api';
 
 export default function AdminVerification() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pendingDoctors, setPendingDoctors] = useState([]);
+  const [verifiedDoctors, setVerifiedDoctors] = useState([]);
+  const [rejectedDoctors, setRejectedDoctors] = useState([]);
+  
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [doctorToReject, setDoctorToReject] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const handleApprove = (doctor) => {
-    console.log('Approving doctor:', doctor.id);
-    setSelectedDoctor(null);
-    // In real app, call API
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await usersAPI.getVerification();
+      setPendingDoctors(data.pending || []);
+      setVerifiedDoctors(data.verified || []);
+      setRejectedDoctors(data.rejected || []);
+    } catch (err) {
+      console.error('Error fetching verification data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleApprove = async (doctor) => {
+    try {
+      setActionLoading(true);
+      await usersAPI.approveDoctor(doctor.id);
+      setSelectedDoctor(null);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error('Error approving doctor:', err);
+      alert('Failed to approve doctor');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleRejectClick = (doctor) => {
@@ -94,22 +71,68 @@ export default function AdminVerification() {
     setSelectedDoctor(null);
   };
 
-  const handleConfirmReject = () => {
-    console.log('Rejecting doctor:', doctorToReject?.id, 'Reason:', rejectReason);
-    setShowRejectModal(false);
-    setDoctorToReject(null);
-    setRejectReason('');
-    // In real app, call API
+  const handleConfirmReject = async () => {
+    try {
+      setActionLoading(true);
+      await usersAPI.rejectDoctor(doctorToReject.id, rejectReason);
+      setShowRejectModal(false);
+      setDoctorToReject(null);
+      setRejectReason('');
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error('Error rejecting doctor:', err);
+      alert('Failed to reject doctor');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getDoctorsList = () => {
     switch (activeTab) {
-      case 'pending': return mockPendingDoctors;
-      case 'verified': return mockVerifiedDoctors;
-      case 'rejected': return mockRejectedDoctors;
+      case 'pending': return pendingDoctors;
+      case 'verified': return verifiedDoctors;
+      case 'rejected': return rejectedDoctors;
       default: return [];
     }
   };
+
+  const handleViewDoctor = async (doctor) => {
+    try {
+      setActionLoading(true);
+      const details = await usersAPI.getDoctorDetails(doctor.id);
+      setSelectedDoctor(details);
+    } catch (err) {
+      console.error('Error fetching doctor details:', err);
+      // Fallback to basic info if API fails
+      setSelectedDoctor(doctor);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <p className="text-gray-600">{error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -123,9 +146,9 @@ export default function AdminVerification() {
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
           {[
-            { id: 'pending', label: 'Pending', count: mockPendingDoctors.length },
-            { id: 'verified', label: 'Verified', count: mockVerifiedDoctors.length },
-            { id: 'rejected', label: 'Rejected', count: mockRejectedDoctors.length },
+            { id: 'pending', label: 'Pending', count: pendingDoctors.length },
+            { id: 'verified', label: 'Verified', count: verifiedDoctors.length },
+            { id: 'rejected', label: 'Rejected', count: rejectedDoctors.length },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -204,7 +227,7 @@ export default function AdminVerification() {
                         <Button size="sm" variant="outline" icon={Eye} onClick={() => setSelectedDoctor(doctor)}>
                           Review
                         </Button>
-                        <Button size="sm" variant="success" icon={Check} onClick={() => handleApprove(doctor)}>
+                        <Button size="sm" variant="success" icon={Check} onClick={() => handleApprove(doctor)} disabled={actionLoading}>
                           Approve
                         </Button>
                         <Button size="sm" variant="danger" icon={X} onClick={() => handleRejectClick(doctor)}>
@@ -213,7 +236,7 @@ export default function AdminVerification() {
                       </>
                     )}
                     {activeTab !== 'pending' && (
-                      <Button size="sm" variant="outline" icon={Eye}>
+                      <Button size="sm" variant="outline" icon={Eye} onClick={() => handleViewDoctor(doctor)}>
                         View
                       </Button>
                     )}

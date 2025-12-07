@@ -11,10 +11,15 @@ import {
   AlertCircle,
   Loader2,
   Eye,
-  MoreVertical
+  MoreVertical,
+  Phone,
+  Mail,
+  DollarSign,
+  Check,
+  X
 } from 'lucide-react';
 import { AdminLayout } from '../../components/layout';
-import { Card, Button, Badge, Avatar, Input, Select } from '../../components/ui';
+import { Card, Button, Badge, Avatar, Input, Select, Modal } from '../../components/ui';
 import { appointmentsAPI } from '../../services/api';
 
 export default function AdminAppointments() {
@@ -24,22 +29,49 @@ export default function AdminAppointments() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const data = await appointmentsAPI.getAll();
+      setAppointments(data || []);
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setLoading(true);
-        const data = await appointmentsAPI.getAll();
-        setAppointments(data || []);
-      } catch (err) {
-        console.error('Error fetching appointments:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAppointments();
   }, []);
+
+  const handleViewDetails = async (apt) => {
+    try {
+      const details = await appointmentsAPI.getById(apt.id);
+      setSelectedAppointment(details);
+    } catch (err) {
+      console.error('Error fetching appointment details:', err);
+      setSelectedAppointment(apt);
+    }
+  };
+
+  const handleUpdateStatus = async (appointmentId, status) => {
+    try {
+      setActionLoading(true);
+      await appointmentsAPI.updateStatus(appointmentId, status);
+      setSelectedAppointment(null);
+      fetchAppointments();
+    } catch (err) {
+      console.error('Error updating appointment status:', err);
+      alert('Failed to update appointment status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const filteredAppointments = appointments.filter(apt => {
     const matchesSearch = 
@@ -174,7 +206,6 @@ export default function AdminAppointments() {
                           <Avatar name={apt.PatientProfile?.fullName || 'Patient'} size="sm" />
                           <div>
                             <p className="font-medium text-gray-900">{apt.PatientProfile?.fullName || 'Unknown'}</p>
-                            <p className="text-sm text-gray-500">{apt.PatientProfile?.phone || '-'}</p>
                           </div>
                         </div>
                       </td>
@@ -202,7 +233,7 @@ export default function AdminAppointments() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(apt)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </td>
@@ -219,6 +250,157 @@ export default function AdminAppointments() {
           )}
         </Card>
       </div>
+
+      {/* Appointment Details Modal */}
+      <Modal
+        isOpen={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        title="Appointment Details"
+        size="lg"
+      >
+        {selectedAppointment && (
+          <div className="space-y-6">
+            {/* Status Banner */}
+            <div className={`p-4 rounded-lg ${
+              selectedAppointment.status === 'confirmed' ? 'bg-blue-50 border border-blue-200' :
+              selectedAppointment.status === 'completed' ? 'bg-green-50 border border-green-200' :
+              selectedAppointment.status === 'cancelled' ? 'bg-red-50 border border-red-200' :
+              'bg-yellow-50 border border-yellow-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Status</p>
+                  <p className="font-semibold capitalize">{selectedAppointment.status}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Payment</p>
+                  <p className="font-semibold capitalize">{selectedAppointment.paymentStatus || 'pending'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Patient Info */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <User className="w-4 h-4" /> Patient Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{selectedAppointment.PatientProfile?.fullName || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{selectedAppointment.PatientProfile?.User?.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="font-medium">{selectedAppointment.PatientProfile?.phoneNumber || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Gender</p>
+                  <p className="font-medium capitalize">{selectedAppointment.PatientProfile?.gender || '-'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Doctor Info */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Stethoscope className="w-4 h-4" /> Doctor Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Name</p>
+                  <p className="font-medium">{selectedAppointment.DoctorProfile?.fullName || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Specialty</p>
+                  <p className="font-medium">{selectedAppointment.DoctorProfile?.specialization || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Email</p>
+                  <p className="font-medium">{selectedAppointment.DoctorProfile?.User?.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Consultation Fee</p>
+                  <p className="font-medium">{selectedAppointment.DoctorProfile?.consultationFee || 0} ETB</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Info */}
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" /> Schedule
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Date</p>
+                  <p className="font-medium">{selectedAppointment.Availability?.date || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Time</p>
+                  <p className="font-medium">
+                    {selectedAppointment.Availability?.startTime} - {selectedAppointment.Availability?.endTime}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t">
+              <Button variant="outline" className="flex-1" onClick={() => setSelectedAppointment(null)}>
+                Close
+              </Button>
+              {selectedAppointment.status === 'pending' && (
+                <>
+                  <Button 
+                    variant="success" 
+                    className="flex-1" 
+                    icon={Check}
+                    onClick={() => handleUpdateStatus(selectedAppointment.id, 'confirmed')}
+                    disabled={actionLoading}
+                  >
+                    Confirm
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    className="flex-1" 
+                    icon={X}
+                    onClick={() => handleUpdateStatus(selectedAppointment.id, 'cancelled')}
+                    disabled={actionLoading}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+              {selectedAppointment.status === 'confirmed' && (
+                <>
+                  <Button 
+                    variant="success" 
+                    className="flex-1" 
+                    icon={CheckCircle}
+                    onClick={() => handleUpdateStatus(selectedAppointment.id, 'completed')}
+                    disabled={actionLoading}
+                  >
+                    Mark Completed
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    className="flex-1" 
+                    icon={XCircle}
+                    onClick={() => handleUpdateStatus(selectedAppointment.id, 'cancelled')}
+                    disabled={actionLoading}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </AdminLayout>
   );
 }
