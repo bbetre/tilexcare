@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -10,27 +10,40 @@ import {
   Edit2,
   Upload,
   Shield,
-  Star
+  Star,
+  Loader2,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
 import { Card, Button, Avatar, Input, Select, Textarea, Badge } from '../../components/ui';
+import { doctorsAPI } from '../../services/api';
 
 export default function DoctorProfile() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [formData, setFormData] = useState({
-    fullName: 'Dr. Abebe Kebede',
-    email: user.email || 'abebe@tilexcare.com',
-    phone: '+251 91 234 5678',
-    specialization: 'General Practitioner',
-    licenseNumber: 'ETH-MED-2015-1234',
-    experience: '10',
-    bio: 'Experienced general practitioner with over 10 years of experience in primary care. Specialized in preventive medicine and chronic disease management. Committed to providing compassionate, patient-centered care.',
-    education: 'MD, Addis Ababa University School of Medicine',
-    languages: 'Amharic, English, Oromo',
-    consultationFee: '500'
+    fullName: '',
+    email: '',
+    phoneNumber: '',
+    specialization: '',
+    licenseNumber: '',
+    yearsOfExperience: '',
+    bio: '',
+    education: '',
+    languages: '',
+    consultationFee: '',
+    hospitalAffiliation: '',
+    qualifications: '',
+    consultationTypes: 'video',
+    availableForEmergency: false,
+    isAvailable: true
   });
 
   const [certificates, setCertificates] = useState([
@@ -39,18 +52,110 @@ export default function DoctorProfile() {
     { id: '3', name: 'CPR Certification', status: 'pending', uploadDate: '2024-06-20' },
   ]);
 
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const data = await doctorsAPI.getMyProfile();
+        setFormData({
+          fullName: data.fullName || '',
+          email: data.email || user.email || '',
+          phoneNumber: data.phoneNumber || '',
+          specialization: data.specialization || '',
+          licenseNumber: data.licenseNumber || '',
+          yearsOfExperience: data.yearsOfExperience?.toString() || '',
+          bio: data.bio || '',
+          education: data.education || '',
+          languages: data.languages || '',
+          consultationFee: data.consultationFee?.toString() || '',
+          hospitalAffiliation: data.hospitalAffiliation || '',
+          qualifications: data.qualifications || '',
+          consultationTypes: data.consultationTypes || 'video',
+          availableForEmergency: data.availableForEmergency || false,
+          isAvailable: data.isAvailable !== false,
+          verificationStatus: data.verificationStatus
+        });
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData({ 
+      ...formData, 
+      [name]: type === 'checkbox' ? checked : value 
+    });
   };
 
-  const handleSave = () => {
-    console.log('Saving profile:', formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      
+      await doctorsAPI.updateProfile({
+        fullName: formData.fullName,
+        phoneNumber: formData.phoneNumber,
+        specialization: formData.specialization,
+        bio: formData.bio,
+        consultationFee: formData.consultationFee,
+        yearsOfExperience: formData.yearsOfExperience,
+        languages: formData.languages,
+        hospitalAffiliation: formData.hospitalAffiliation,
+        education: formData.education,
+        qualifications: formData.qualifications,
+        consultationTypes: formData.consultationTypes,
+        availableForEmergency: formData.availableForEmergency,
+        isAvailable: formData.isAvailable
+      });
+      
+      setSuccessMessage('Profile updated successfully!');
+      setIsEditing(false);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      setError('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <DoctorLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout>
       <div className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -63,15 +168,63 @@ export default function DoctorProfile() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="secondary" onClick={() => setIsEditing(false)}>
+              <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={saving}>
                 Cancel
               </Button>
-              <Button icon={Save} onClick={handleSave}>
-                Save Changes
+              <Button icon={saving ? Loader2 : Save} onClick={handleSave} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           )}
         </div>
+
+        {/* Availability Toggle Card */}
+        <Card className={`border-2 ${formData.isAvailable ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-900">Availability Status</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {formData.isAvailable 
+                  ? 'You are visible to patients and can receive appointment bookings' 
+                  : 'You are hidden from patient listings and cannot receive new bookings'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const newValue = !formData.isAvailable;
+                setFormData({ ...formData, isAvailable: newValue });
+                // Auto-save availability toggle
+                doctorsAPI.updateProfile({ isAvailable: newValue })
+                  .then(() => {
+                    setSuccessMessage(newValue ? 'You are now available for bookings' : 'You are now hidden from patients');
+                    setTimeout(() => setSuccessMessage(''), 3000);
+                  })
+                  .catch((err) => {
+                    console.error('Error updating availability:', err);
+                    setFormData({ ...formData, isAvailable: !newValue }); // Revert on error
+                    setError('Failed to update availability');
+                  });
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
+                formData.isAvailable 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : 'bg-red-500 text-white hover:bg-red-600'
+              }`}
+            >
+              {formData.isAvailable ? (
+                <>
+                  <ToggleRight className="w-5 h-5" />
+                  Available
+                </>
+              ) : (
+                <>
+                  <ToggleLeft className="w-5 h-5" />
+                  Unavailable
+                </>
+              )}
+            </button>
+          </div>
+        </Card>
 
         {/* Profile Header Card */}
         <Card>
@@ -85,23 +238,28 @@ export default function DoctorProfile() {
               )}
             </div>
             <div className="text-center sm:text-left flex-1">
-              <h2 className="text-xl font-semibold text-gray-900">{formData.fullName}</h2>
+              <h2 className="text-xl font-semibold text-gray-900">{formData.fullName || 'Doctor'}</h2>
               <p className="text-primary-600">{formData.specialization}</p>
               <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                <Badge variant="success">
+                <Badge variant={formData.verificationStatus === 'verified' ? 'success' : 'warning'}>
                   <Shield className="w-3 h-3 mr-1" />
-                  Verified
+                  {formData.verificationStatus === 'verified' ? 'Verified' : 'Pending'}
+                </Badge>
+                <Badge variant={formData.isAvailable ? 'success' : 'danger'}>
+                  {formData.isAvailable ? 'Available' : 'Unavailable'}
                 </Badge>
                 <Badge variant="primary">
                   <Star className="w-3 h-3 mr-1" />
                   4.9 Rating
                 </Badge>
-                <Badge variant="default">{formData.experience} years exp.</Badge>
+                {formData.yearsOfExperience && (
+                  <Badge variant="default">{formData.yearsOfExperience} years exp.</Badge>
+                )}
               </div>
             </div>
             <div className="text-center sm:text-right">
               <p className="text-sm text-gray-500">Consultation Fee</p>
-              <p className="text-2xl font-bold text-primary-600">{formData.consultationFee} ETB</p>
+              <p className="text-2xl font-bold text-primary-600">{formData.consultationFee || 0} ETB</p>
             </div>
           </div>
         </Card>
@@ -148,16 +306,18 @@ export default function DoctorProfile() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  disabled={!isEditing}
+                  disabled={true}
                   icon={Mail}
+                  helperText="Email cannot be changed"
                 />
                 <Input
                   label="Phone Number"
-                  name="phone"
-                  value={formData.phone}
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
                   onChange={handleChange}
                   disabled={!isEditing}
                   icon={Phone}
+                  placeholder="+251 91 234 5678"
                 />
                 <Input
                   label="Languages"
@@ -165,6 +325,15 @@ export default function DoctorProfile() {
                   value={formData.languages}
                   onChange={handleChange}
                   disabled={!isEditing}
+                  placeholder="Amharic, English, Oromo"
+                />
+                <Input
+                  label="Hospital/Clinic Affiliation"
+                  name="hospitalAffiliation"
+                  value={formData.hospitalAffiliation}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  placeholder="St. Paul's Hospital"
                 />
               </div>
             </Card>
@@ -195,9 +364,9 @@ export default function DoctorProfile() {
                 />
                 <Input
                   label="Years of Experience"
-                  name="experience"
+                  name="yearsOfExperience"
                   type="number"
-                  value={formData.experience}
+                  value={formData.yearsOfExperience}
                   onChange={handleChange}
                   disabled={!isEditing}
                 />
