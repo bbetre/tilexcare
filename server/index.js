@@ -15,6 +15,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const prescriptionRoutes = require('./routes/prescriptionRoutes');
 const earningsRoutes = require('./routes/earningsRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const paymentsRoutes = require('./routes/paymentsRoutes');
+const usersRoutes = require('./routes/usersRoutes');
+const ratingRoutes = require('./routes/ratingRoutes');
+const patientRoutes = require('./routes/patientRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +27,15 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Disable caching for API responses to ensure fresh data
+app.use((req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
+    next();
+});
 
 // Routes
 app.use('/auth', authRoutes);
@@ -35,6 +48,10 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/prescriptions', prescriptionRoutes);
 app.use('/earnings', earningsRoutes);
 app.use('/analytics', analyticsRoutes);
+app.use('/payments', paymentsRoutes);
+app.use('/users', usersRoutes);
+app.use('/ratings', ratingRoutes);
+app.use('/patients', patientRoutes);
 
 // Basic Health Check
 app.get('/', (req, res) => {

@@ -19,7 +19,7 @@ const getEarningsSummary = async (req, res) => {
         startOfWeek.setHours(0, 0, 0, 0);
 
         // Total earnings
-        const totalEarnings = await Transaction.sum('doctorEarnings', {
+        const totalEarnings = await Transaction.sum('doctorEarning', {
             where: {
                 doctorId: doctor.id,
                 status: 'completed'
@@ -27,7 +27,7 @@ const getEarningsSummary = async (req, res) => {
         }) || 0;
 
         // This month earnings
-        const monthlyEarnings = await Transaction.sum('doctorEarnings', {
+        const monthlyEarnings = await Transaction.sum('doctorEarning', {
             where: {
                 doctorId: doctor.id,
                 status: 'completed',
@@ -36,7 +36,7 @@ const getEarningsSummary = async (req, res) => {
         }) || 0;
 
         // This week earnings
-        const weeklyEarnings = await Transaction.sum('doctorEarnings', {
+        const weeklyEarnings = await Transaction.sum('doctorEarning', {
             where: {
                 doctorId: doctor.id,
                 status: 'completed',
@@ -45,7 +45,7 @@ const getEarningsSummary = async (req, res) => {
         }) || 0;
 
         // Pending payouts
-        const pendingPayouts = await Transaction.sum('doctorEarnings', {
+        const pendingPayouts = await Transaction.sum('doctorEarning', {
             where: {
                 doctorId: doctor.id,
                 status: 'pending'
@@ -158,7 +158,7 @@ const getEarningsByPeriod = async (req, res) => {
             },
             attributes: [
                 [sequelize.fn('DATE', sequelize.col('createdAt')), 'date'],
-                [sequelize.fn('SUM', sequelize.col('doctorEarnings')), 'earnings'],
+                [sequelize.fn('SUM', sequelize.col('doctorEarning')), 'earnings'],
                 [sequelize.fn('COUNT', sequelize.col('id')), 'consultations']
             ],
             group: [sequelize.fn('DATE', sequelize.col('createdAt'))],

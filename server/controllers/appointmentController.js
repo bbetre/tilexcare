@@ -1,4 +1,4 @@
-const { Appointment, Availability, DoctorProfile, PatientProfile, User } = require('../models');
+const { Appointment, Availability, DoctorProfile, PatientProfile, User, Consultation, Prescription } = require('../models');
 
 const bookAppointment = async (req, res) => {
     try {
@@ -57,14 +57,25 @@ const getMyAppointments = async (req, res) => {
                 include: [
                     {
                         model: DoctorProfile,
-                        attributes: ['fullName', 'specialization']
+                        attributes: ['fullName', 'specialization', 'consultationFee', 'bio'],
+                        include: [{ model: User, attributes: ['email'] }]
                     },
                     {
                         model: Availability,
                         attributes: ['date', 'startTime', 'endTime']
+                    },
+                    {
+                        model: Consultation,
+                        attributes: ['diagnosis', 'symptoms', 'notes', 'followUp'],
+                        required: false,
+                        include: [{
+                            model: Prescription,
+                            attributes: ['id'],
+                            required: false
+                        }]
                     }
                 ],
-                order: [[Availability, 'date', 'ASC']]
+                order: [[Availability, 'date', 'DESC']]
             });
         } else if (role === 'doctor') {
             const doctor = await DoctorProfile.findOne({ where: { userId } });
@@ -152,11 +163,11 @@ const getAllAppointments = async (req, res) => {
             include: [
                 {
                     model: DoctorProfile,
-                    attributes: ['fullName', 'specialization', 'phone']
+                    attributes: ['fullName', 'specialization']
                 },
                 {
                     model: PatientProfile,
-                    attributes: ['fullName', 'phone']
+                    attributes: ['fullName']
                 },
                 {
                     model: Availability,
@@ -173,4 +184,91 @@ const getAllAppointments = async (req, res) => {
     }
 };
 
-module.exports = { bookAppointment, getMyAppointments, cancelAppointment, getAllAppointments };
+// Admin: Get appointment details
+const getAppointmentDetails = async (req, res) => {
+    try {
+        const role = req.userRole;
+        if (role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const { appointmentId } = req.params;
+
+        const appointment = await Appointment.findByPk(appointmentId, {
+            include: [
+                {
+                    model: DoctorProfile,
+                    attributes: ['id', 'fullName', 'specialization', 'consultationFee'],
+                    include: [{ model: User, attributes: ['email'] }]
+                },
+                {
+                    model: PatientProfile,
+                    attributes: ['id', 'fullName', 'phoneNumber', 'dateOfBirth', 'gender'],
+                    include: [{ model: User, attributes: ['email'] }]
+                },
+                {
+                    model: Availability,
+                    attributes: ['date', 'startTime', 'endTime']
+                }
+            ]
+        });
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        res.json(appointment);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Admin: Update appointment status
+const updateAppointmentStatus = async (req, res) => {
+    try {
+        const role = req.userRole;
+        if (role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const { appointmentId } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const appointment = await Appointment.findByPk(appointmentId, {
+            include: [{ model: Availability }]
+        });
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Appointment not found' });
+        }
+
+        appointment.status = status;
+        await appointment.save();
+
+        // If cancelled, free up the slot
+        if (status === 'cancelled' && appointment.Availability) {
+            appointment.Availability.isBooked = false;
+            await appointment.Availability.save();
+        }
+
+        res.json({ message: 'Appointment status updated', appointment });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { 
+    bookAppointment, 
+    getMyAppointments, 
+    cancelAppointment, 
+    getAllAppointments,
+    getAppointmentDetails,
+    updateAppointmentStatus
+};

@@ -7,7 +7,7 @@ const getMyPrescriptions = async (req, res) => {
         const userId = req.userId;
         const role = req.userRole;
 
-        let prescriptions;
+        let prescriptions = [];
 
         if (role === 'patient') {
             const patient = await PatientProfile.findOne({ where: { userId } });
@@ -18,15 +18,32 @@ const getMyPrescriptions = async (req, res) => {
                 include: [
                     {
                         model: DoctorProfile,
-                        attributes: ['fullName', 'specialization']
+                        attributes: ['fullName', 'specialization'],
+                        required: false
                     },
                     {
                         model: Consultation,
-                        attributes: ['diagnosis', 'notes']
+                        attributes: ['diagnosis', 'notes'],
+                        required: false
                     }
                 ],
                 order: [['createdAt', 'DESC']]
             });
+
+            // Format for frontend
+            const formatted = prescriptions.map(rx => ({
+                id: rx.id,
+                doctorName: rx.DoctorProfile?.fullName || 'Unknown Doctor',
+                specialty: rx.DoctorProfile?.specialization || 'General',
+                diagnosis: rx.diagnosis || rx.Consultation?.diagnosis || 'Not specified',
+                medications: rx.medications || [],
+                notes: rx.notes || rx.Consultation?.notes || '',
+                date: rx.createdAt?.toISOString().split('T')[0],
+                validUntil: rx.validUntil,
+                status: rx.validUntil && new Date(rx.validUntil) > new Date() ? 'active' : 'expired'
+            }));
+
+            return res.json(formatted);
         } else if (role === 'doctor') {
             const doctor = await DoctorProfile.findOne({ where: { userId } });
             if (!doctor) return res.json([]);
@@ -36,23 +53,25 @@ const getMyPrescriptions = async (req, res) => {
                 include: [
                     {
                         model: PatientProfile,
-                        attributes: ['fullName']
+                        attributes: ['fullName'],
+                        required: false
                     },
                     {
                         model: Consultation,
-                        attributes: ['diagnosis', 'notes']
+                        attributes: ['diagnosis', 'notes'],
+                        required: false
                     }
                 ],
                 order: [['createdAt', 'DESC']]
             });
+
+            return res.json(prescriptions);
         } else {
             return res.json([]);
         }
-
-        res.json(prescriptions);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Get prescriptions error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
@@ -136,4 +155,48 @@ const createPrescription = async (req, res) => {
     }
 };
 
-module.exports = { getMyPrescriptions, getPrescriptionById, createPrescription };
+// Get doctor's prescriptions (formatted for doctor view)
+const getDoctorPrescriptions = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const doctor = await DoctorProfile.findOne({ where: { userId } });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found' });
+        }
+
+        const prescriptions = await Prescription.findAll({
+            where: { doctorId: doctor.id },
+            include: [
+                {
+                    model: PatientProfile,
+                    attributes: ['fullName']
+                },
+                {
+                    model: Consultation,
+                    attributes: ['diagnosis', 'notes']
+                }
+            ],
+            order: [['createdAt', 'DESC']]
+        });
+
+        // Format for frontend
+        const formatted = prescriptions.map(rx => ({
+            id: rx.id,
+            patientName: rx.PatientProfile?.fullName || 'Unknown',
+            diagnosis: rx.diagnosis || rx.Consultation?.diagnosis || 'Not specified',
+            medications: rx.medications || [],
+            notes: rx.notes || rx.Consultation?.notes,
+            status: rx.validUntil && new Date(rx.validUntil) > new Date() ? 'active' : 'completed',
+            createdAt: rx.createdAt,
+            validUntil: rx.validUntil
+        }));
+
+        res.json(formatted);
+    } catch (error) {
+        console.error('Get doctor prescriptions error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { getMyPrescriptions, getPrescriptionById, createPrescription, getDoctorPrescriptions };

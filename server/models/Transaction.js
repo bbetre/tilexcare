@@ -42,6 +42,32 @@ const Transaction = sequelize.define('Transaction', {
     transactionRef: {
         type: DataTypes.STRING,
         allowNull: true
+    },
+    // Admin notes
+    adminNotes: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    // Payout tracking
+    payoutStatus: {
+        type: DataTypes.ENUM('pending', 'paid'),
+        defaultValue: 'pending'
+    },
+    payoutDate: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    payoutMethod: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    payoutReference: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    payoutNotes: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     timestamps: true

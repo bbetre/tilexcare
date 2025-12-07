@@ -97,7 +97,7 @@ const getAnalytics = async (req, res) => {
             const appointments = await Appointment.count({
                 where: { doctorId: doctor.id }
             });
-            const revenue = await Transaction.sum('doctorEarnings', {
+            const revenue = await Transaction.sum('doctorEarning', {
                 where: { 
                     doctorId: doctor.id,
                     status: 'completed'

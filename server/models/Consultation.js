@@ -11,12 +11,22 @@ const Consultation = sequelize.define('Consultation', {
         type: DataTypes.UUID,
         allowNull: false,
     },
+    symptoms: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    diagnosis: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     notes: {
         type: DataTypes.TEXT,
+        allowNull: true
     },
-    prescription: {
-        type: DataTypes.TEXT, // JSON string or text for now
-    },
+    followUp: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    }
 }, {
     timestamps: true,
 });

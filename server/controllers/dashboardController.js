@@ -44,18 +44,26 @@ const getPatientDashboard = async (req, res) => {
             include: [
                 {
                     model: DoctorProfile,
-                    attributes: ['fullName', 'specialization']
+                    attributes: ['fullName', 'specialization'],
+                    required: false
                 },
                 {
                     model: Availability,
-                    attributes: ['date']
+                    attributes: ['date'],
+                    required: false
                 },
                 {
                     model: Consultation,
-                    attributes: ['diagnosis', 'prescription']
+                    attributes: ['diagnosis', 'notes'],
+                    required: false,
+                    include: [{
+                        model: Prescription,
+                        attributes: ['id'],
+                        required: false
+                    }]
                 }
             ],
-            order: [[Availability, 'date', 'DESC']],
+            order: [['createdAt', 'DESC']],
             limit: 5
         });
 
@@ -83,9 +91,9 @@ const getPatientDashboard = async (req, res) => {
                 id: apt.id,
                 doctor: apt.DoctorProfile?.fullName,
                 specialty: apt.DoctorProfile?.specialization,
-                date: apt.Availability?.date,
-                diagnosis: apt.Consultation?.diagnosis || 'N/A',
-                hasPrescription: !!apt.Consultation?.prescription
+                date: apt.Availability?.date || apt.createdAt?.toISOString().split('T')[0],
+                diagnosis: apt.Consultation?.diagnosis || 'Consultation completed',
+                hasPrescription: !!apt.Consultation?.Prescription
             })),
             stats: {
                 totalAppointments,
