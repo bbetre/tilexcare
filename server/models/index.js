@@ -7,6 +7,7 @@ const Appointment = require('./Appointment');
 const Consultation = require('./Consultation');
 const Transaction = require('./Transaction');
 const Prescription = require('./Prescription');
+const Rating = require('./Rating');
 
 // Associations
 User.hasOne(PatientProfile, { foreignKey: 'userId' });
@@ -53,6 +54,16 @@ Prescription.belongsTo(PatientProfile, { foreignKey: 'patientId' });
 DoctorProfile.hasMany(Prescription, { foreignKey: 'doctorId' });
 Prescription.belongsTo(DoctorProfile, { foreignKey: 'doctorId' });
 
+// Ratings
+DoctorProfile.hasMany(Rating, { foreignKey: 'doctorId' });
+Rating.belongsTo(DoctorProfile, { foreignKey: 'doctorId' });
+
+PatientProfile.hasMany(Rating, { foreignKey: 'patientId' });
+Rating.belongsTo(PatientProfile, { foreignKey: 'patientId' });
+
+Appointment.hasOne(Rating, { foreignKey: 'appointmentId' });
+Rating.belongsTo(Appointment, { foreignKey: 'appointmentId' });
+
 const syncDatabase = async () => {
     try {
         await sequelize.authenticate();
@@ -74,5 +85,6 @@ module.exports = {
     Appointment,
     Consultation,
     Transaction,
-    Prescription
+    Prescription,
+    Rating
 };

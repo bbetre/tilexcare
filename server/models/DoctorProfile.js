@@ -37,6 +37,53 @@ const DoctorProfile = sequelize.define('DoctorProfile', {
     licenseDocumentUrl: {
         type: DataTypes.STRING,
     },
+    // Contact information
+    phoneNumber: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    // Enhanced profile fields
+    qualifications: {
+        type: DataTypes.TEXT, // JSON string of qualifications array
+        allowNull: true,
+    },
+    yearsOfExperience: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    },
+    languages: {
+        type: DataTypes.STRING, // Comma-separated languages
+        allowNull: true,
+    },
+    hospitalAffiliation: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    education: {
+        type: DataTypes.TEXT, // JSON string of education array
+        allowNull: true,
+    },
+    certifications: {
+        type: DataTypes.TEXT, // JSON string of certifications array
+        allowNull: true,
+    },
+    specializations: {
+        type: DataTypes.TEXT, // JSON string of sub-specializations
+        allowNull: true,
+    },
+    consultationTypes: {
+        type: DataTypes.STRING, // e.g., "video,in-person,chat"
+        defaultValue: 'video',
+    },
+    availableForEmergency: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
+    // Master availability toggle - when false, doctor is hidden from patient listings
+    isAvailable: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+    },
 }, {
     timestamps: true,
 });

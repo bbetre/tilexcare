@@ -24,6 +24,27 @@ const PatientProfile = sequelize.define('PatientProfile', {
     phoneNumber: {
         type: DataTypes.STRING,
     },
+    address: {
+        type: DataTypes.STRING,
+    },
+    emergencyContact: {
+        type: DataTypes.STRING,
+    },
+    bloodType: {
+        type: DataTypes.STRING,
+    },
+    allergies: {
+        type: DataTypes.TEXT,
+    },
+    chronicConditions: {
+        type: DataTypes.TEXT,
+    },
+    currentMedications: {
+        type: DataTypes.TEXT,
+    },
+    previousSurgeries: {
+        type: DataTypes.TEXT,
+    },
 }, {
     timestamps: true,
 });
