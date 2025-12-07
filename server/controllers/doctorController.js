@@ -4,7 +4,7 @@ const sequelize = require('../config/database');
 
 const setAvailability = async (req, res) => {
     try {
-        const { slots } = req.body; // Array of { date, startTime, endTime }
+        const { slots, replaceExisting = true } = req.body; // Array of { date, startTime, endTime }
         const userId = req.userId;
 
         const doctor = await DoctorProfile.findOne({ where: { userId } });
@@ -16,19 +16,81 @@ const setAvailability = async (req, res) => {
             return res.status(403).json({ message: 'Doctor is not verified yet' });
         }
 
-        const availabilityData = slots.map(slot => ({
+        const today = new Date().toISOString().split('T')[0];
+        
+        // If replaceExisting is true, delete all unbooked future slots first
+        let deleted = 0;
+        if (replaceExisting) {
+            const deleteResult = await Availability.destroy({
+                where: {
+                    doctorId: doctor.id,
+                    date: { [Op.gte]: today },
+                    isBooked: false
+                }
+            });
+            deleted = deleteResult;
+        }
+
+        // Handle case where no slots provided (doctor wants to clear all availability)
+        if (!slots || !Array.isArray(slots) || slots.length === 0) {
+            return res.status(200).json({ 
+                message: 'Availability cleared successfully',
+                deleted,
+                created: 0,
+                total: 0
+            });
+        }
+
+        // Filter out past dates
+        const validSlots = slots.filter(slot => slot.date >= today);
+
+        if (validSlots.length === 0) {
+            return res.status(200).json({ 
+                message: 'No valid future slots to create',
+                deleted,
+                created: 0,
+                total: 0
+            });
+        }
+
+        const availabilityData = validSlots.map(slot => ({
             doctorId: doctor.id,
             date: slot.date,
             startTime: slot.startTime,
             endTime: slot.endTime,
         }));
 
-        await Availability.bulkCreate(availabilityData, { ignoreDuplicates: true });
+        // Create new slots
+        let created = 0;
+        let skipped = 0;
+        
+        for (const slotData of availabilityData) {
+            const [slot, wasCreated] = await Availability.findOrCreate({
+                where: {
+                    doctorId: slotData.doctorId,
+                    date: slotData.date,
+                    startTime: slotData.startTime
+                },
+                defaults: slotData
+            });
+            
+            if (wasCreated) {
+                created++;
+            } else {
+                skipped++;
+            }
+        }
 
-        res.status(201).json({ message: 'Availability set successfully' });
+        res.status(201).json({ 
+            message: 'Availability updated successfully',
+            deleted,
+            created,
+            skipped,
+            total: validSlots.length
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Set availability error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
@@ -36,10 +98,22 @@ const getDoctorAvailability = async (req, res) => {
     try {
         const { doctorId } = req.params;
 
+        // First check if doctor is available
+        const doctor = await DoctorProfile.findByPk(doctorId);
+        if (!doctor || doctor.isAvailable === false) {
+            return res.json([]); // Return empty if doctor is unavailable
+        }
+
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+
         const slots = await Availability.findAll({
             where: {
                 doctorId,
-                isBooked: false
+                isBooked: false,
+                date: {
+                    [Op.gte]: today // Only future or today's slots
+                }
             },
             order: [['date', 'ASC'], ['startTime', 'ASC']]
         });
@@ -272,4 +346,77 @@ const updateMyProfile = async (req, res) => {
     }
 };
 
-module.exports = { setAvailability, getDoctorAvailability, getAllDoctors, getMyPatients, getMyProfile, updateMyProfile };
+// Get doctor's own availability slots
+const getMyAvailability = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        const doctor = await DoctorProfile.findOne({ where: { userId } });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found' });
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+
+        const slots = await Availability.findAll({
+            where: {
+                doctorId: doctor.id,
+                date: {
+                    [Op.gte]: today
+                }
+            },
+            order: [['date', 'ASC'], ['startTime', 'ASC']]
+        });
+
+        res.json(slots);
+    } catch (error) {
+        console.error('Get my availability error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Delete availability slot
+const deleteAvailability = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { slotId } = req.params;
+
+        const doctor = await DoctorProfile.findOne({ where: { userId } });
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor profile not found' });
+        }
+
+        const slot = await Availability.findOne({
+            where: {
+                id: slotId,
+                doctorId: doctor.id
+            }
+        });
+
+        if (!slot) {
+            return res.status(404).json({ message: 'Slot not found' });
+        }
+
+        if (slot.isBooked) {
+            return res.status(400).json({ message: 'Cannot delete a booked slot. Please cancel the appointment first.' });
+        }
+
+        await slot.destroy();
+
+        res.json({ message: 'Availability slot deleted successfully' });
+    } catch (error) {
+        console.error('Delete availability error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+module.exports = { 
+    setAvailability, 
+    getDoctorAvailability, 
+    getAllDoctors, 
+    getMyPatients, 
+    getMyProfile, 
+    updateMyProfile,
+    getMyAvailability,
+    deleteAvailability
+};

@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:5000';
+// Use environment variable or default to localhost for development
+// In Docker production, nginx proxies /api to the backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // Helper to get auth headers
 const getAuthHeaders = () => {
@@ -64,9 +66,13 @@ export const doctorsAPI = {
   getAll: () => fetchAPI('/doctors'),
   getById: (id) => fetchAPI(`/doctors/${id}`),
   getAvailability: (doctorId) => fetchAPI(`/doctors/${doctorId}/availability`),
+  getMyAvailability: () => fetchAPI('/doctors/availability'),
   setAvailability: (slots) => fetchAPI('/doctors/availability', {
     method: 'POST',
     body: JSON.stringify({ slots })
+  }),
+  deleteAvailability: (slotId) => fetchAPI(`/doctors/availability/${slotId}`, {
+    method: 'DELETE'
   }),
   getMyProfile: () => fetchAPI('/doctors/profile'),
   updateProfile: (data) => fetchAPI('/doctors/profile', {

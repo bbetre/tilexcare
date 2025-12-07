@@ -20,6 +20,21 @@ const bookAppointment = async (req, res) => {
             return res.status(400).json({ message: 'Slot already booked' });
         }
 
+        // Check if the slot date is not in the past
+        const today = new Date().toISOString().split('T')[0];
+        if (availability.date < today) {
+            return res.status(400).json({ message: 'Cannot book past time slots' });
+        }
+
+        // Check if doctor is still available for bookings
+        const doctor = await DoctorProfile.findByPk(availability.doctorId);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+        if (doctor.isAvailable === false) {
+            return res.status(400).json({ message: 'Doctor is currently not accepting appointments' });
+        }
+
         // Create Appointment
         // For MVP without payment gateway yet, we'll auto-confirm
         const appointment = await Appointment.create({
