@@ -1,19 +1,20 @@
 import { clsx } from 'clsx';
+import { Loader2 } from 'lucide-react';
 
 const variants = {
-  primary: 'bg-primary-500 hover:bg-primary-600 text-white',
-  secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700',
-  success: 'bg-success-500 hover:bg-success-600 text-white',
-  danger: 'bg-red-500 hover:bg-red-600 text-white',
-  outline: 'border border-primary-500 text-primary-500 hover:bg-primary-50 bg-transparent',
-  ghost: 'text-gray-600 hover:bg-gray-100 bg-transparent',
+  primary: 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm hover:shadow active:scale-95',
+  secondary: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 shadow-sm hover:shadow active:scale-95',
+  success: 'bg-success-600 hover:bg-success-700 text-white shadow-sm active:scale-95',
+  danger: 'bg-error-600 hover:bg-error-700 text-white shadow-sm active:scale-95',
+  outline: 'border border-primary-600 text-primary-600 hover:bg-primary-50 bg-transparent active:scale-95',
+  ghost: 'text-gray-600 hover:bg-gray-100 bg-transparent hover:text-gray-900',
 };
 
 const sizes = {
   sm: 'py-1.5 px-3 text-sm',
-  md: 'py-2 px-4 text-sm',
-  lg: 'py-2.5 px-5 text-base',
-  xl: 'py-3 px-6 text-lg',
+  md: 'py-2.5 px-4 text-sm',
+  lg: 'py-3 px-6 text-base',
+  xl: 'py-3.5 px-8 text-lg',
 };
 
 export default function Button({
@@ -25,12 +26,14 @@ export default function Button({
   loading = false,
   icon: Icon,
   iconPosition = 'left',
+  type = 'button',
   ...props
 }) {
   return (
     <button
+      type={type}
       className={clsx(
-        'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
         variants[variant],
         sizes[size],
         className
@@ -39,10 +42,7 @@ export default function Button({
       {...props}
     >
       {loading && (
-        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
+        <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
       )}
       {Icon && iconPosition === 'left' && !loading && <Icon className="w-4 h-4 mr-2" />}
       {children}

@@ -17,7 +17,7 @@ const fetchAPI = async (endpoint, options = {}) => {
     // Add cache-busting timestamp for GET requests
     const separator = endpoint.includes('?') ? '&' : '?';
     const cacheBuster = options.method && options.method !== 'GET' ? '' : `${separator}_t=${Date.now()}`;
-    
+
     const response = await fetch(`${API_BASE_URL}${endpoint}${cacheBuster}`, {
       ...options,
       headers: {
@@ -67,9 +67,9 @@ export const doctorsAPI = {
   getById: (id) => fetchAPI(`/doctors/${id}`),
   getAvailability: (doctorId) => fetchAPI(`/doctors/${doctorId}/availability`),
   getMyAvailability: () => fetchAPI('/doctors/availability'),
-  setAvailability: (slots) => fetchAPI('/doctors/availability', {
+  setAvailability: (slots, scheduleConfig, slotDuration, breakTime) => fetchAPI('/doctors/availability', {
     method: 'POST',
-    body: JSON.stringify({ slots })
+    body: JSON.stringify({ slots, scheduleConfig, slotDuration, breakTime })
   }),
   deleteAvailability: (slotId) => fetchAPI(`/doctors/availability/${slotId}`, {
     method: 'DELETE'
@@ -79,6 +79,25 @@ export const doctorsAPI = {
     method: 'PUT',
     body: JSON.stringify(data)
   }),
+  uploadProfilePicture: async (file) => {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    const response = await fetch(`${API_BASE_URL}/doctors/profile/picture`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+  },
   getMyPatients: () => fetchAPI('/doctors/patients')
 };
 
@@ -89,6 +108,25 @@ export const patientsAPI = {
     method: 'PUT',
     body: JSON.stringify(data)
   }),
+  uploadProfilePicture: async (file) => {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    const response = await fetch(`${API_BASE_URL}/patients/profile/picture`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+  },
   getById: (patientId) => fetchAPI(`/patients/${patientId}`)
 };
 
@@ -207,7 +245,7 @@ export const usersAPI = {
 export const ratingsAPI = {
   getDoctorsWithRatings: () => fetchAPI('/ratings/doctors'),
   getDoctorProfile: (doctorId) => fetchAPI(`/ratings/doctor/${doctorId}`),
-  getDoctorRatings: (doctorId, limit = 10, offset = 0) => 
+  getDoctorRatings: (doctorId, limit = 10, offset = 0) =>
     fetchAPI(`/ratings/doctor/${doctorId}/ratings?limit=${limit}&offset=${offset}`),
   submitRating: (data) => fetchAPI('/ratings', {
     method: 'POST',

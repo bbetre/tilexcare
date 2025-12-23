@@ -8,13 +8,12 @@ import {
   Heart,
   FileText,
   Shield,
-  Camera,
   Save,
   Edit2,
   Loader2
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
-import { Card, Button, Avatar, Input, Select, Textarea, Badge } from '../../components/ui';
+import { Card, Button, Avatar, Input, Select, Textarea, Badge, ImageUpload } from '../../components/ui';
 import { patientsAPI } from '../../services/api';
 
 export default function PatientProfile() {
@@ -25,7 +24,7 @@ export default function PatientProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -38,7 +37,8 @@ export default function PatientProfile() {
     allergies: '',
     chronicConditions: '',
     currentMedications: '',
-    previousSurgeries: ''
+    previousSurgeries: '',
+    profilePictureUrl: ''
   });
 
   // Fetch profile data on mount
@@ -59,7 +59,8 @@ export default function PatientProfile() {
           allergies: data.allergies || '',
           chronicConditions: data.chronicConditions || '',
           currentMedications: data.currentMedications || '',
-          previousSurgeries: data.previousSurgeries || ''
+          previousSurgeries: data.previousSurgeries || '',
+          profilePictureUrl: data.profilePictureUrl || ''
         });
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -70,17 +71,28 @@ export default function PatientProfile() {
     };
 
     fetchProfile();
-  }, []);
+  }, [user.email]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleProfilePictureUpload = async (file) => {
+    try {
+      const result = await patientsAPI.uploadProfilePicture(file);
+      setFormData(prev => ({ ...prev, profilePictureUrl: result.profilePictureUrl }));
+      setSuccessMessage('Profile picture updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      throw new Error(err.message || 'Failed to upload profile picture');
+    }
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       await patientsAPI.updateProfile({
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber,
@@ -94,10 +106,10 @@ export default function PatientProfile() {
         currentMedications: formData.currentMedications,
         previousSurgeries: formData.previousSurgeries
       });
-      
+
       setSuccessMessage('Profile updated successfully!');
       setIsEditing(false);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
@@ -120,33 +132,39 @@ export default function PatientProfile() {
 
   return (
     <PatientLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         {/* Success Message */}
         {successMessage && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 flex items-center gap-3 animate-fade-in">
+            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <Shield className="w-4 h-4 text-green-600" />
+            </div>
             {successMessage}
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 flex items-center gap-3 animate-fade-in">
+            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+              <Shield className="w-4 h-4 text-red-600" />
+            </div>
             {error}
           </div>
         )}
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-gray-500 mt-1">Manage your personal and medical information</p>
+            <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">My Profile</h1>
+            <p className="text-gray-500 mt-1 text-lg">Manage your personal and medical information</p>
           </div>
           {!isEditing ? (
-            <Button icon={Edit2} onClick={() => setIsEditing(true)}>
+            <Button icon={Edit2} onClick={() => setIsEditing(true)} size="lg" className="shadow-lg shadow-primary-500/20">
               Edit Profile
             </Button>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button variant="secondary" onClick={() => setIsEditing(false)} disabled={saving}>
                 Cancel
               </Button>
@@ -158,29 +176,36 @@ export default function PatientProfile() {
         </div>
 
         {/* Profile Header Card */}
-        <Card>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative">
-              <Avatar name={formData.fullName} size="2xl" />
-              {isEditing && (
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
-                  <Camera className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <div className="text-center sm:text-left">
-              <h2 className="text-xl font-semibold text-gray-900">{formData.fullName || 'Patient'}</h2>
-              <p className="text-gray-500">{formData.email}</p>
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                <Badge variant="primary">Patient</Badge>
-                <Badge variant="success">Verified</Badge>
+        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-50 rounded-full -mr-32 -mt-32 opacity-50 blur-3xl pointer-events-none"></div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-8 relative z-10">
+            <ImageUpload
+              currentImage={formData.profilePictureUrl ? `http://localhost:5000${formData.profilePictureUrl}` : null}
+              onUpload={handleProfilePictureUpload}
+              size="2xl"
+              shape="circle"
+            />
+            <div className="text-center sm:text-left space-y-2">
+              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{formData.fullName || 'Patient'}</h2>
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-gray-500">
+                <Mail className="w-4 h-4" />
+                <span>{formData.email}</span>
+              </div>
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-4">
+                <Badge variant="surface" className="bg-blue-50 text-blue-700 border-blue-100 px-3 py-1">
+                  Patient Account
+                </Badge>
+                <Badge variant="surface" className="bg-green-50 text-green-700 border-green-100 px-3 py-1 flex items-center gap-1">
+                  <Shield className="w-3 h-3" /> Verified
+                </Badge>
               </div>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+        <div className="bg-white p-1.5 rounded-2xl inline-flex shadow-sm border border-gray-100 mb-6">
           {[
             { id: 'personal', label: 'Personal Info', icon: User },
             { id: 'medical', label: 'Medical History', icon: Heart },
@@ -189,11 +214,10 @@ export default function PatientProfile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ${activeTab === tab.id
+                ? 'bg-primary-50 text-primary-700 shadow-sm ring-1 ring-primary-200'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                }`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}

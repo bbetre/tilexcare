@@ -7,16 +7,16 @@ import AppointmentList from '../components/AppointmentList';
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState(null);
+    const [user] = useState(() => {
+        const stored = localStorage.getItem('user');
+        return stored ? JSON.parse(stored) : null;
+    });
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (!storedUser) {
+        if (!user) {
             navigate('/login');
-        } else {
-            setUser(JSON.parse(storedUser));
         }
-    }, [navigate]);
+    }, [user, navigate]);
 
     if (!user) return <div>Loading...</div>;
 

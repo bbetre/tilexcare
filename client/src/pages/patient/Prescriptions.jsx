@@ -75,92 +75,95 @@ export default function Prescriptions() {
 
   return (
     <PatientLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Prescriptions</h1>
-          <p className="text-gray-500 mt-1">View and download your prescriptions</p>
-        </div>
-
-        {/* Search */}
-        <div className="max-w-md">
-          <Input
-            placeholder="Search by doctor, diagnosis, or medication..."
-            icon={Search}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">Medications</h1>
+            <p className="text-gray-500 mt-1 text-lg">Manage your prescriptions and medical records.</p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search medications..."
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-primary-100 transition-all shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Prescriptions List */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
           {filteredPrescriptions.length === 0 ? (
-            <Card className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">No prescriptions found</h3>
-              <p className="text-gray-500 mt-1">
-                {searchQuery ? 'Try a different search term' : 'Your prescriptions will appear here after consultations'}
+            <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Pill className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">No prescriptions found</h3>
+              <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                {searchQuery ? 'Try matching the medication name or doctor.' : 'Your prescribed medications will appear here.'}
               </p>
-            </Card>
+            </div>
           ) : (
             filteredPrescriptions.map((prescription) => (
-              <Card key={prescription.id} className="hover:shadow-md transition-shadow">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  <Avatar name={prescription.doctorName} size="lg" />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-900">{prescription.doctorName}</h3>
-                      <Badge variant="primary">{prescription.specialty}</Badge>
+              <div key={prescription.id} className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Icon & Basic Info */}
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="w-12 h-12 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-600 group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                      <FileText className="w-6 h-6" />
                     </div>
-                    
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-                      <Calendar className="w-4 h-4" />
-                      {prescription.date}
-                    </div>
-
-                    <div className="p-3 bg-gray-50 rounded-lg mb-3">
-                      <p className="text-sm font-medium text-gray-700">Diagnosis</p>
-                      <p className="text-gray-900">{prescription.diagnosis}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                        <Pill className="w-4 h-4" />
-                        Medications ({prescription.medications.length})
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3 mb-1">
+                        <h3 className="font-bold text-lg text-gray-900">
+                          {prescription.diagnosis || 'General Prescription'}
+                        </h3>
+                        <Badge variant="surface" className="bg-gray-100 text-gray-700 border-gray-200">
+                          RX-{prescription.id}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-500 flex items-center gap-2 mb-3">
+                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {prescription.date}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 font-medium text-gray-700">Dr. {prescription.doctorName}</span>
                       </p>
+
                       <div className="flex flex-wrap gap-2">
-                        {prescription.medications.map((med, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-primary-50 text-primary-700 text-sm rounded-md"
-                          >
-                            {med.name}
+                        {prescription.medications.slice(0, 3).map((med, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-100">
+                            <Pill className="w-3.5 h-3.5" /> {med.name}
                           </span>
                         ))}
+                        {prescription.medications.length > 3 && (
+                          <span className="inline-flex items-center px-3 py-1 bg-gray-50 text-gray-600 rounded-lg text-sm border border-gray-200">
+                            +{prescription.medications.length - 3} more
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex sm:flex-col gap-2">
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 pt-4 lg:pt-0 lg:border-l lg:border-gray-100 lg:pl-6">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      icon={Eye}
+                      variant="secondary"
                       onClick={() => setSelectedPrescription(prescription)}
                     >
-                      View
+                      View Details
                     </Button>
                     <Button
-                      size="sm"
+                      variant="outline"
                       icon={Download}
                       onClick={() => handleDownload(prescription)}
+                      className="text-primary-600 border-primary-200 hover:bg-primary-50"
                     >
-                      Download
+                      PDF
                     </Button>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>

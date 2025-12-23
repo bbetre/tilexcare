@@ -44,7 +44,7 @@ export default function DoctorAvailability() {
   const [loadingSlots, setLoadingSlots] = useState(true);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Fetch existing availability on mount
+  // Fetch existing availability and schedule config on mount
   useEffect(() => {
     fetchExistingSlots();
   }, []);
@@ -52,8 +52,25 @@ export default function DoctorAvailability() {
   const fetchExistingSlots = async () => {
     try {
       setLoadingSlots(true);
-      const slots = await doctorsAPI.getMyAvailability();
-      setExistingSlots(slots);
+      const data = await doctorsAPI.getMyAvailability();
+      
+      // Handle both old format (array) and new format (object with slots)
+      if (Array.isArray(data)) {
+        setExistingSlots(data);
+      } else {
+        setExistingSlots(data.slots || []);
+        
+        // Load saved schedule config if available
+        if (data.scheduleConfig) {
+          setSchedule(data.scheduleConfig);
+        }
+        if (data.slotDuration) {
+          setSlotDuration(String(data.slotDuration));
+        }
+        if (data.breakTime) {
+          setBreakTime(String(data.breakTime));
+        }
+      }
     } catch (err) {
       console.error('Error fetching existing slots:', err);
     } finally {
@@ -173,8 +190,13 @@ export default function DoctorAvailability() {
         });
       }
       
-      // Always call setAvailability - it will clear old slots and create new ones
-      const result = await doctorsAPI.setAvailability(slots);
+      // Save slots along with schedule configuration
+      const result = await doctorsAPI.setAvailability(
+        slots, 
+        schedule, 
+        parseInt(slotDuration), 
+        parseInt(breakTime)
+      );
       
       if (slots.length > 0) {
         setSaveMessage(`Schedule updated: ${result.deleted || 0} old slots removed, ${result.created} new slots created`);

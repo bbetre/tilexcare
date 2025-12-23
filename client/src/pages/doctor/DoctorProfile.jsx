@@ -5,7 +5,6 @@ import {
   Phone,
   Award,
   FileText,
-  Camera,
   Save,
   Edit2,
   Upload,
@@ -16,7 +15,7 @@ import {
   ToggleRight
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
-import { Card, Button, Avatar, Input, Select, Textarea, Badge } from '../../components/ui';
+import { Card, Button, Avatar, Input, Select, Textarea, Badge, ImageUpload } from '../../components/ui';
 import { doctorsAPI } from '../../services/api';
 
 export default function DoctorProfile() {
@@ -27,7 +26,7 @@ export default function DoctorProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -43,7 +42,8 @@ export default function DoctorProfile() {
     qualifications: '',
     consultationTypes: 'video',
     availableForEmergency: false,
-    isAvailable: true
+    isAvailable: true,
+    profilePictureUrl: ''
   });
 
   const [certificates, setCertificates] = useState([
@@ -74,7 +74,8 @@ export default function DoctorProfile() {
           consultationTypes: data.consultationTypes || 'video',
           availableForEmergency: data.availableForEmergency || false,
           isAvailable: data.isAvailable !== false,
-          verificationStatus: data.verificationStatus
+          verificationStatus: data.verificationStatus,
+          profilePictureUrl: data.profilePictureUrl || ''
         });
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -89,17 +90,28 @@ export default function DoctorProfile() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
     });
+  };
+
+  const handleProfilePictureUpload = async (file) => {
+    try {
+      const result = await doctorsAPI.uploadProfilePicture(file);
+      setFormData(prev => ({ ...prev, profilePictureUrl: result.profilePictureUrl }));
+      setSuccessMessage('Profile picture updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      throw new Error(err.message || 'Failed to upload profile picture');
+    }
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       await doctorsAPI.updateProfile({
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber,
@@ -115,10 +127,10 @@ export default function DoctorProfile() {
         availableForEmergency: formData.availableForEmergency,
         isAvailable: formData.isAvailable
       });
-      
+
       setSuccessMessage('Profile updated successfully!');
       setIsEditing(false);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
@@ -184,8 +196,8 @@ export default function DoctorProfile() {
             <div>
               <h3 className="font-semibold text-gray-900">Availability Status</h3>
               <p className="text-sm text-gray-600 mt-1">
-                {formData.isAvailable 
-                  ? 'You are visible to patients and can receive appointment bookings' 
+                {formData.isAvailable
+                  ? 'You are visible to patients and can receive appointment bookings'
                   : 'You are hidden from patient listings and cannot receive new bookings'}
               </p>
             </div>
@@ -205,11 +217,10 @@ export default function DoctorProfile() {
                     setError('Failed to update availability');
                   });
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${
-                formData.isAvailable 
-                  ? 'bg-green-500 text-white hover:bg-green-600' 
-                  : 'bg-red-500 text-white hover:bg-red-600'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${formData.isAvailable
+                ? 'bg-green-500 text-white hover:bg-green-600'
+                : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
             >
               {formData.isAvailable ? (
                 <>
@@ -229,14 +240,12 @@ export default function DoctorProfile() {
         {/* Profile Header Card */}
         <Card>
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative">
-              <Avatar name={formData.fullName} size="2xl" />
-              {isEditing && (
-                <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white hover:bg-primary-600 transition-colors">
-                  <Camera className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+            <ImageUpload
+              currentImage={formData.profilePictureUrl ? `http://localhost:5000${formData.profilePictureUrl}` : null}
+              onUpload={handleProfilePictureUpload}
+              size="2xl"
+              shape="circle"
+            />
             <div className="text-center sm:text-left flex-1">
               <h2 className="text-xl font-semibold text-gray-900">{formData.fullName || 'Doctor'}</h2>
               <p className="text-primary-600">{formData.specialization}</p>
@@ -274,11 +283,10 @@ export default function DoctorProfile() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab.id
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}

@@ -22,7 +22,8 @@ import {
   Globe,
   Zap,
   GraduationCap,
-  User
+  User,
+  Check
 } from 'lucide-react';
 import { PatientLayout } from '../../components/layout';
 import { Card, Button, Avatar, Badge, Modal, Textarea } from '../../components/ui';
@@ -131,12 +132,12 @@ export default function PatientAppointments() {
 
   const handleConfirmCancel = async () => {
     if (!appointmentToCancel) return;
-    
+
     try {
       setCancelLoading(true);
       await appointmentsAPI.cancel(appointmentToCancel.id);
       // Update local state
-      setAppointments(prev => prev.map(apt => 
+      setAppointments(prev => prev.map(apt =>
         apt.id === appointmentToCancel.id ? { ...apt, status: 'cancelled' } : apt
       ));
       setShowCancelModal(false);
@@ -166,7 +167,7 @@ export default function PatientAppointments() {
 
   const handleSubmitRating = async () => {
     if (!appointmentToRate || ratingValue === 0) return;
-    
+
     try {
       setRatingLoading(true);
       await ratingsAPI.submitRating({
@@ -175,7 +176,7 @@ export default function PatientAppointments() {
         review: reviewText || null,
         isAnonymous
       });
-      
+
       // Mark as rated
       setRatedAppointments(prev => new Set([...prev, appointmentToRate.id]));
       setShowRatingModal(false);
@@ -212,7 +213,7 @@ export default function PatientAppointments() {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
         stars.push(<Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />);
@@ -251,29 +252,28 @@ export default function PatientAppointments() {
 
   return (
     <PatientLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
-            <p className="text-gray-500 mt-1">View and manage your appointments</p>
+            <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">My Appointments</h1>
+            <p className="text-gray-500 mt-1 text-lg">Track and manage your medical consultations.</p>
           </div>
-          <Button icon={Calendar} onClick={() => navigate('/patient/book')}>
-            Book New
+          <Button icon={Calendar} size="lg" className="shadow-lg shadow-primary-500/20" onClick={() => navigate('/patient/book')}>
+            Book New Visit
           </Button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+        <div className="bg-white p-1.5 rounded-2xl inline-flex shadow-sm border border-gray-100 overflow-x-auto max-w-full">
           {['upcoming', 'past', 'cancelled'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors capitalize ${
-                activeTab === tab
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 capitalize whitespace-nowrap ${activeTab === tab
+                ? 'bg-primary-50 text-primary-700 shadow-sm ring-1 ring-primary-200'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                }`}
             >
               {tab}
             </button>
@@ -281,113 +281,134 @@ export default function PatientAppointments() {
         </div>
 
         {/* Appointments List */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {filteredAppointments.length === 0 ? (
-            <Card className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900">No {activeTab} appointments</h3>
-              <p className="text-gray-500 mt-1">
-                {activeTab === 'upcoming' 
-                  ? 'Book an appointment to get started'
-                  : `You don't have any ${activeTab} appointments`
+            <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-gray-200">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">No {activeTab} appointments</h3>
+              <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                {activeTab === 'upcoming'
+                  ? 'Your schedule is clear. Book a consultation to get expert medical advice.'
+                  : `You don't have any ${activeTab} appointments in your history.`
                 }
               </p>
               {activeTab === 'upcoming' && (
-                <Button className="mt-4" onClick={() => navigate('/patient/book')}>
+                <Button className="mt-6" onClick={() => navigate('/patient/book')}>
                   Book Appointment
                 </Button>
               )}
-            </Card>
+            </div>
           ) : (
             filteredAppointments.map((appointment) => (
-              <Card 
-                key={appointment.id} 
-                className="hover:shadow-md transition-shadow cursor-pointer"
+              <div
+                key={appointment.id}
+                className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
                 onClick={() => setSelectedAppointment(appointment)}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <Avatar name={appointment.doctorName} size="lg" />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{appointment.doctorName}</h3>
-                      <Badge variant={statusConfig[appointment.status].variant}>
-                        {statusConfig[appointment.status].label}
-                      </Badge>
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                  {/* Doctor & Status */}
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="relative">
+                      <Avatar name={appointment.doctorName} size="xl" className="ring-4 ring-gray-50 group-hover:ring-primary-50 transition-all" />
+                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center ${appointment.status === 'confirmed' ? 'bg-success-500' :
+                        appointment.status === 'pending' ? 'bg-warning-500' : 'bg-gray-400'
+                        }`}>
+                        {appointment.status === 'confirmed' && <Check className="w-3 h-3 text-white" />}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-500">{appointment.specialty}</p>
-                    
-                    <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {appointment.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {formatTime(appointment.time)}
-                      </span>
-                      <span className="font-medium text-primary-600">
-                        {appointment.fee} ETB
-                      </span>
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3 mb-1">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-primary-600 transition-colors">
+                          {appointment.doctorName}
+                        </h3>
+                        <Badge variant={statusConfig[appointment.status].variant}>
+                          {statusConfig[appointment.status].label}
+                        </Badge>
+                      </div>
+                      <p className="text-primary-600 font-medium text-sm mb-3">{appointment.specialty}</p>
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-700">{appointment.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-700">{formatTime(appointment.time)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                          <CreditCard className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">{appointment.fee} ETB</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end" onClick={(e) => e.stopPropagation()}>
+                  {/* Actions */}
+                  <div className="flex flex-wrap gap-3 lg:flex-col lg:items-end lg:w-48 pt-4 lg:pt-0 border-t lg:border-0 border-gray-50" onClick={(e) => e.stopPropagation()}>
                     {isJoinable(appointment) && (
                       <Button
-                        size="sm"
+                        className="w-full justify-center shadow-lg shadow-primary-500/20 animate-pulse"
                         icon={Video}
                         onClick={() => navigate(`/room/${appointment.id}`)}
                       >
                         Join Call
                       </Button>
                     )}
-                    
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      icon={Eye}
-                      onClick={() => setSelectedAppointment(appointment)}
-                    >
-                      Details
-                    </Button>
 
-                    {appointment.status === 'completed' && appointment.hasPrescription && (
+                    <div className="flex gap-2 w-full">
                       <Button
                         size="sm"
-                        variant="outline"
-                        icon={FileText}
-                        onClick={() => navigate('/patient/prescriptions')}
+                        variant="secondary"
+                        className="flex-1 justify-center"
+                        onClick={() => setSelectedAppointment(appointment)}
                       >
-                        View Rx
+                        Details
                       </Button>
-                    )}
 
-                    {canRate(appointment) && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        icon={Star}
-                        className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
-                        onClick={() => handleRateClick(appointment)}
-                      >
-                        Rate
-                      </Button>
-                    )}
+                      {appointment.status === 'completed' && appointment.hasPrescription && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 justify-center text-success-600 border-success-200 hover:bg-success-50"
+                          icon={FileText}
+                          onClick={() => navigate('/patient/prescriptions')}
+                        >
+                          Rx
+                        </Button>
+                      )}
+                    </div>
 
-                    {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={() => handleCancelClick(appointment)}
-                      >
-                        Cancel
-                      </Button>
-                    )}
+                    <div className="flex gap-2 w-full">
+                      {canRate(appointment) && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={Star}
+                          className="flex-1 justify-center text-yellow-600 border-yellow-200 hover:bg-yellow-50 hover:border-yellow-300"
+                          onClick={() => handleRateClick(appointment)}
+                        >
+                          Rate
+                        </Button>
+                      )}
+
+                      {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="flex-1 justify-center text-red-500 hover:bg-red-50 hover:text-red-600"
+                          onClick={() => handleCancelClick(appointment)}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>
@@ -404,15 +425,15 @@ export default function PatientAppointments() {
           <div className="space-y-6">
             {/* Doctor Info - Clickable for profile */}
             <div className="flex items-center gap-4 p-4 bg-primary-50 rounded-lg">
-              <div 
-                className="cursor-pointer" 
+              <div
+                className="cursor-pointer"
                 onClick={() => handleViewProfile(selectedAppointment.doctorId)}
                 title="View Doctor Profile"
               >
                 <Avatar name={selectedAppointment.doctorName} size="xl" className="hover:ring-2 hover:ring-primary-300 transition-all" />
               </div>
               <div className="flex-1">
-                <h3 
+                <h3
                   className="font-semibold text-gray-900 cursor-pointer hover:text-primary-600 transition-colors"
                   onClick={() => handleViewProfile(selectedAppointment.doctorId)}
                 >
@@ -425,7 +446,7 @@ export default function PatientAppointments() {
                 {selectedAppointment.bio && (
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2">{selectedAppointment.bio}</p>
                 )}
-                <button 
+                <button
                   className="text-xs text-primary-500 hover:text-primary-700 mt-1 flex items-center gap-1"
                   onClick={() => handleViewProfile(selectedAppointment.doctorId)}
                 >
@@ -474,28 +495,28 @@ export default function PatientAppointments() {
                   <FileText className="w-4 h-4 text-primary-500" />
                   Consultation Summary
                 </h4>
-                
+
                 {selectedAppointment.consultation.symptoms && (
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-500 mb-1">Symptoms</p>
                     <p className="text-gray-900">{selectedAppointment.consultation.symptoms}</p>
                   </div>
                 )}
-                
+
                 {selectedAppointment.consultation.diagnosis && (
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                     <p className="text-sm text-blue-700 mb-1">Diagnosis</p>
                     <p className="font-medium text-blue-900">{selectedAppointment.consultation.diagnosis}</p>
                   </div>
                 )}
-                
+
                 {selectedAppointment.consultation.notes && (
                   <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                     <p className="text-sm text-yellow-700 mb-1">Doctor's Notes</p>
                     <p className="text-yellow-900">{selectedAppointment.consultation.notes}</p>
                   </div>
                 )}
-                
+
                 {selectedAppointment.consultation.followUp && (
                   <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <p className="text-sm text-purple-700 mb-1">Follow-up Recommended</p>
@@ -527,7 +548,7 @@ export default function PatientAppointments() {
               >
                 Close
               </Button>
-              
+
               {selectedAppointment.hasPrescription && (
                 <Button
                   variant="outline"
@@ -538,7 +559,7 @@ export default function PatientAppointments() {
                   View Prescription
                 </Button>
               )}
-              
+
               {(selectedAppointment.status === 'confirmed' || selectedAppointment.status === 'pending') && (
                 <Button
                   variant="danger"
@@ -547,7 +568,7 @@ export default function PatientAppointments() {
                   Cancel
                 </Button>
               )}
-              
+
               {isJoinable(selectedAppointment) && (
                 <Button
                   className="flex-1"
@@ -586,7 +607,7 @@ export default function PatientAppointments() {
 
           <div className="p-4 bg-yellow-50 rounded-lg">
             <p className="text-sm text-yellow-800">
-              <strong>Refund Policy:</strong> Cancellations made more than 24 hours before the appointment 
+              <strong>Refund Policy:</strong> Cancellations made more than 24 hours before the appointment
               are eligible for a full refund. Late cancellations may be subject to a cancellation fee.
             </p>
           </div>
@@ -603,8 +624,10 @@ export default function PatientAppointments() {
               variant="danger"
               className="flex-1"
               onClick={handleConfirmCancel}
+              disabled={cancelLoading}
             >
-              Yes, Cancel
+              {cancelLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {cancelLoading ? 'Cancelling...' : 'Yes, Cancel'}
             </Button>
           </div>
         </div>
@@ -641,11 +664,10 @@ export default function PatientAppointments() {
                     className="p-1 transition-transform hover:scale-110"
                   >
                     <Star
-                      className={`w-10 h-10 ${
-                        star <= (ratingHover || ratingValue)
-                          ? 'text-yellow-400 fill-yellow-400'
-                          : 'text-gray-300'
-                      }`}
+                      className={`w-10 h-10 ${star <= (ratingHover || ratingValue)
+                        ? 'text-yellow-400 fill-yellow-400'
+                        : 'text-gray-300'
+                        }`}
                     />
                   </button>
                 ))}
@@ -867,15 +889,15 @@ export default function PatientAppointments() {
               <div className="space-y-1">
                 {[5, 4, 3, 2, 1].map((star) => {
                   const count = profileDoctor.stats.ratingDistribution[star] || 0;
-                  const percentage = profileDoctor.stats.totalRatings > 0 
-                    ? (count / profileDoctor.stats.totalRatings) * 100 
+                  const percentage = profileDoctor.stats.totalRatings > 0
+                    ? (count / profileDoctor.stats.totalRatings) * 100
                     : 0;
                   return (
                     <div key={star} className="flex items-center gap-2 text-sm">
                       <span className="w-3">{star}</span>
                       <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-yellow-400 rounded-full"
                           style={{ width: `${percentage}%` }}
                         />
