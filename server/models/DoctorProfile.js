@@ -37,6 +37,10 @@ const DoctorProfile = sequelize.define('DoctorProfile', {
     licenseDocumentUrl: {
         type: DataTypes.STRING,
     },
+    profilePictureUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     // Contact information
     phoneNumber: {
         type: DataTypes.STRING,
@@ -83,6 +87,21 @@ const DoctorProfile = sequelize.define('DoctorProfile', {
     isAvailable: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+    },
+    // Weekly schedule configuration (JSON)
+    scheduleConfig: {
+        type: DataTypes.TEXT, // JSON string of schedule settings
+        allowNull: true,
+    },
+    // Slot duration in minutes
+    slotDuration: {
+        type: DataTypes.INTEGER,
+        defaultValue: 30,
+    },
+    // Break time between slots in minutes
+    breakTime: {
+        type: DataTypes.INTEGER,
+        defaultValue: 10,
     },
 }, {
     timestamps: true,

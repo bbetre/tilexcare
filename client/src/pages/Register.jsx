@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Heart, Mail, Lock, User, Stethoscope, Award, Eye, EyeOff, Check } from 'lucide-react';
+import { Heart, Mail, Lock, User, Stethoscope, Award, Eye, EyeOff, CheckCircle2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Button, Input, Select } from '../components/ui';
 
 const Register = () => {
@@ -29,20 +29,15 @@ const Register = () => {
   };
 
   const handleNext = () => {
-    if (step === 1) {
-      setStep(2);
-    }
+    if (step === 1) setStep(2);
   };
 
   const handleBack = () => {
-    if (step === 2) {
-      setStep(1);
-    }
+    if (step === 2) setStep(1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -58,7 +53,7 @@ const Register = () => {
         body: JSON.stringify(formData),
       });
       const data = await response.json();
-      
+
       if (response.ok) {
         navigate('/login', { state: { message: 'Registration successful! Please login.' } });
       } else {
@@ -73,105 +68,123 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-success-500 to-primary-600 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-            <Heart className="w-8 h-8 text-primary-500" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">TilexCare</h1>
-          <p className="text-white/80 mt-2">Join our healthcare community</p>
-        </div>
+    <div className="min-h-screen grid lg:grid-cols-2">
+      {/* Left: Branding & Visual */}
+      <div className="hidden lg:flex relative bg-primary-600 items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542736667-069246bdbc6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80')] bg-cover bg-center opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-600/90 to-primary-900/90 backdrop-blur-sm"></div>
 
-        {/* Register Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <div className={`flex items-center gap-2 ${step >= 1 ? 'text-primary-500' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= 1 ? 'bg-primary-500 text-white' : 'bg-gray-200'
-              }`}>
-                {step > 1 ? <Check className="w-4 h-4" /> : '1'}
-              </div>
-              <span className="text-sm font-medium hidden sm:inline">Account Type</span>
+        <div className="relative z-10 p-12 text-white max-w-lg">
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/20">
+            <Heart className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-4xl font-display font-bold mb-6 leading-tight">
+            Join the TilexCare <br /> Community.
+          </h1>
+          <p className="text-primary-100 text-lg mb-8 leading-relaxed">
+            Create your account today to access premium healthcare services, connect with verified doctors, and take control of your well-being.
+          </p>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+              <User className="w-8 h-8 text-secondary-400 mb-3" />
+              <h3 className="font-semibold text-white mb-1">For Patients</h3>
+              <p className="text-sm text-primary-200">Find doctors & book appointments instantly.</p>
             </div>
-            <div className="w-8 h-0.5 bg-gray-200">
-              <div className={`h-full bg-primary-500 transition-all ${step >= 2 ? 'w-full' : 'w-0'}`} />
+            <div className="p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+              <Stethoscope className="w-8 h-8 text-secondary-400 mb-3" />
+              <h3 className="font-semibold text-white mb-1">For Doctors</h3>
+              <p className="text-sm text-primary-200">Manage your practice & reach more patients.</p>
             </div>
-            <div className={`flex items-center gap-2 ${step >= 2 ? 'text-primary-500' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step >= 2 ? 'bg-primary-500 text-white' : 'bg-gray-200'
-              }`}>
-                2
-              </div>
-              <span className="text-sm font-medium hidden sm:inline">Details</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Register Form */}
+      <div className="flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-white overflow-y-auto">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center lg:text-left">
+            <div className="lg:hidden inline-flex w-12 h-12 bg-primary-50 rounded-xl items-center justify-center mb-4">
+              <Heart className="w-6 h-6 text-primary-600" />
             </div>
+            <h2 className="text-3xl font-bold text-gray-900 font-display">Create Account</h2>
+            <p className="mt-2 text-gray-500">
+              {step === 1 ? 'Choose how you want to join us.' : 'Please fill in your details.'}
+            </p>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="flex items-center gap-3">
+            <div className={`h-2 rounded-full flex-1 transition-all duration-300 ${step >= 1 ? 'bg-primary-500' : 'bg-gray-100'}`} />
+            <div className={`h-2 rounded-full flex-1 transition-all duration-300 ${step >= 2 ? 'bg-primary-500' : 'bg-gray-100'}`} />
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            <div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm border border-red-100 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0"></span>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Step 1: Role Selection */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             {step === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold text-gray-900 text-center mb-4">I want to join as a...</h2>
-                
+              <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => handleRoleSelect('patient')}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      formData.role === 'patient'
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-200 group ${formData.role === 'patient'
+                      ? 'border-primary-600 bg-primary-50 ring-1 ring-primary-600'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
                   >
-                    <User className={`w-10 h-10 mx-auto mb-3 ${
-                      formData.role === 'patient' ? 'text-primary-500' : 'text-gray-400'
-                    }`} />
-                    <p className="font-semibold text-gray-900">Patient</p>
-                    <p className="text-xs text-gray-500 mt-1">Book appointments & consultations</p>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${formData.role === 'patient' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-white'
+                      }`}>
+                      <User className="w-6 h-6" />
+                    </div>
+                    <h3 className={`font-semibold ${formData.role === 'patient' ? 'text-primary-900' : 'text-gray-900'}`}>Patient</h3>
+                    <p className="text-xs text-gray-500 mt-1">I want to book appointments</p>
+                    {formData.role === 'patient' && (
+                      <div className="absolute top-4 right-4 text-primary-600">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                    )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleRoleSelect('doctor')}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      formData.role === 'doctor'
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-200 group ${formData.role === 'doctor'
+                      ? 'border-primary-600 bg-primary-50 ring-1 ring-primary-600'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
                   >
-                    <Stethoscope className={`w-10 h-10 mx-auto mb-3 ${
-                      formData.role === 'doctor' ? 'text-primary-500' : 'text-gray-400'
-                    }`} />
-                    <p className="font-semibold text-gray-900">Doctor</p>
-                    <p className="text-xs text-gray-500 mt-1">Provide consultations</p>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-colors ${formData.role === 'doctor' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-white'
+                      }`}>
+                      <Stethoscope className="w-6 h-6" />
+                    </div>
+                    <h3 className={`font-semibold ${formData.role === 'doctor' ? 'text-primary-900' : 'text-gray-900'}`}>Doctor</h3>
+                    <p className="text-xs text-gray-500 mt-1">I want to treat patients</p>
+                    {formData.role === 'doctor' && (
+                      <div className="absolute top-4 right-4 text-primary-600">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                    )}
                   </button>
                 </div>
 
-                <Button type="button" className="w-full mt-6" size="lg" onClick={handleNext}>
-                  Continue
+                <Button type="button" size="xl" className="w-full mt-6" onClick={handleNext}>
+                  Continue <ChevronRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             )}
 
-            {/* Step 2: Account Details */}
             {step === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold text-gray-900 text-center mb-4">
-                  {formData.role === 'doctor' ? 'Doctor Registration' : 'Create Your Account'}
-                </h2>
-
+              <div className="space-y-5 animate-fade-in">
                 <Input
                   label="Full Name"
                   name="fullName"
-                  placeholder="Enter your full name"
+                  placeholder="e.g. John Doe"
                   value={formData.fullName}
                   onChange={handleChange}
                   icon={User}
@@ -179,49 +192,54 @@ const Register = () => {
                 />
 
                 <Input
-                  label="Email"
+                  label="Email Address"
                   name="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="name@example.com"
                   value={formData.email}
                   onChange={handleChange}
                   icon={Mail}
                   required
                 />
 
-                <div className="relative">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <Input
+                      label="Password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="******"
+                      value={formData.password}
+                      onChange={handleChange}
+                      icon={Lock}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-[2.2rem] text-gray-400 hover:text-gray-600 focus:outline-none"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                   <Input
-                    label="Password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a password"
-                    value={formData.password}
+                    label="Confirm"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="******"
+                    value={formData.confirmPassword}
                     onChange={handleChange}
                     icon={Lock}
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
                 </div>
 
-                <Input
-                  label="Confirm Password"
-                  name="confirmPassword"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  icon={Lock}
-                  required
-                />
-
                 {formData.role === 'doctor' && (
-                  <>
+                  <div className="p-5 bg-gray-50 rounded-2xl space-y-4 border border-gray-100">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Award className="w-4 h-4 text-primary-500" />
+                      Professional Details
+                    </h4>
                     <Select
                       label="Specialization"
                       name="specialization"
@@ -229,7 +247,7 @@ const Register = () => {
                       onChange={handleChange}
                       required
                     >
-                      <option value="">Select specialization</option>
+                      <option value="">Select your specialty</option>
                       <option value="General Practitioner">General Practitioner</option>
                       <option value="Dermatologist">Dermatologist</option>
                       <option value="Pediatrician">Pediatrician</option>
@@ -241,58 +259,36 @@ const Register = () => {
                     </Select>
 
                     <Input
-                      label="License Number"
+                      label="Medical License Number"
                       name="licenseNumber"
-                      placeholder="Enter your medical license number"
+                      placeholder="License ID"
                       value={formData.licenseNumber}
                       onChange={handleChange}
                       icon={Award}
                       required
                     />
-
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                      <strong>Note:</strong> Your account will be reviewed by our admin team before activation. 
-                      You'll need to upload your credentials after registration.
-                    </div>
-                  </>
+                  </div>
                 )}
 
-                <div className="flex items-start gap-2 mt-4">
-                  <input type="checkbox" className="w-4 h-4 mt-1 text-primary-500 rounded" required />
-                  <span className="text-sm text-gray-600">
-                    I agree to the{' '}
-                    <a href="#" className="text-primary-500 hover:underline">Terms of Service</a>
-                    {' '}and{' '}
-                    <a href="#" className="text-primary-500 hover:underline">Privacy Policy</a>
-                  </span>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <Button type="button" variant="secondary" className="flex-1" onClick={handleBack}>
+                <div className="flex gap-3 pt-2">
+                  <Button type="button" variant="ghost" onClick={handleBack} className="px-6">
                     Back
                   </Button>
-                  <Button type="submit" className="flex-1" loading={loading}>
+                  <Button type="submit" size="xl" className="flex-1 shadow-lg shadow-primary-500/25" loading={loading}>
                     Create Account
                   </Button>
                 </div>
               </div>
             )}
-          </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-center text-sm text-gray-500">
               Already have an account?{' '}
-              <Link to="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+              <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
                 Sign in
               </Link>
             </p>
-          </div>
+          </form>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-white/80 text-sm mt-8">
-          © 2025 TilexCare. All rights reserved.
-        </p>
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
 const { PatientProfile, User } = require('../models');
+const path = require('path');
+const fs = require('fs');
 
 // Get patient's own profile
 const getMyProfile = async (req, res) => {
     try {
         const userId = req.userId;
 
-        const patient = await PatientProfile.findOne({ 
+        const patient = await PatientProfile.findOne({
             where: { userId },
             include: [{ model: User, attributes: ['email'] }]
         });
@@ -27,7 +29,8 @@ const getMyProfile = async (req, res) => {
             allergies: patient.allergies || '',
             chronicConditions: patient.chronicConditions || '',
             currentMedications: patient.currentMedications || '',
-            previousSurgeries: patient.previousSurgeries || ''
+            previousSurgeries: patient.previousSurgeries || '',
+            profilePictureUrl: patient.profilePictureUrl || ''
         });
     } catch (error) {
         console.error('Get patient profile error:', error);
@@ -81,6 +84,51 @@ const updateMyProfile = async (req, res) => {
     }
 };
 
+// Upload profile picture
+const uploadProfilePicture = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const patient = await PatientProfile.findOne({ where: { userId } });
+
+        if (!patient) {
+            return res.status(404).json({ message: 'Patient profile not found' });
+        }
+
+        // Delete old profile picture if exists
+        if (patient.profilePictureUrl) {
+            const oldFilePath = path.join(__dirname, '..', patient.profilePictureUrl);
+            if (fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
+            }
+        }
+
+        // Save new profile picture URL
+        const profilePictureUrl = `/uploads/profiles/${req.file.filename}`;
+        patient.profilePictureUrl = profilePictureUrl;
+        await patient.save();
+
+        res.json({
+            message: 'Profile picture uploaded successfully',
+            profilePictureUrl
+        });
+    } catch (error) {
+        console.error('Upload profile picture error:', error);
+        // Delete uploaded file if there was an error
+        if (req.file) {
+            const filePath = path.join(__dirname, '../uploads/profiles', req.file.filename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 // Get patient profile by ID (for doctors to view)
 const getPatientById = async (req, res) => {
     try {
@@ -107,7 +155,8 @@ const getPatientById = async (req, res) => {
             allergies: patient.allergies || '',
             chronicConditions: patient.chronicConditions || '',
             currentMedications: patient.currentMedications || '',
-            previousSurgeries: patient.previousSurgeries || ''
+            previousSurgeries: patient.previousSurgeries || '',
+            profilePictureUrl: patient.profilePictureUrl || ''
         });
     } catch (error) {
         console.error('Get patient by ID error:', error);
@@ -115,4 +164,5 @@ const getPatientById = async (req, res) => {
     }
 };
 
-module.exports = { getMyProfile, updateMyProfile, getPatientById };
+module.exports = { getMyProfile, updateMyProfile, uploadProfilePicture, getPatientById };
+

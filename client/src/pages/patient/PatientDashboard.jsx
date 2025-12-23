@@ -94,7 +94,7 @@ export default function PatientDashboard() {
     setBookingStep(1);
     setSelectedSlot(null);
     setDoctorAvailability([]);
-    
+
     try {
       setLoadingAvailability(true);
       const slots = await doctorsAPI.getAvailability(doctor.id);
@@ -120,7 +120,7 @@ export default function PatientDashboard() {
 
   const handleConfirmPayment = async () => {
     if (!selectedSlot) return;
-    
+
     try {
       setBookingLoading(true);
       await appointmentsAPI.book(selectedSlot.id);
@@ -163,7 +163,7 @@ export default function PatientDashboard() {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
         stars.push(<Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />);
@@ -186,142 +186,201 @@ export default function PatientDashboard() {
     );
   }
 
+  if (error) {
+    return (
+      <PatientLayout>
+        <div className="flex flex-col items-center justify-center h-64 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <Activity className="w-8 h-8 text-red-500" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Something went wrong</h3>
+          <p className="text-gray-500 mt-2 mb-6 max-w-sm">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      </PatientLayout>
+    );
+  }
+
   return (
     <PatientLayout>
-      <div className="space-y-8">
+      <div className="space-y-8 animate-fade-in">
         {/* Welcome Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-3xl font-display font-bold text-gray-900 tracking-tight">
               {greeting}, {userName}! 👋
             </h1>
-            <p className="text-gray-500 mt-1">How are you feeling today?</p>
+            <p className="text-gray-500 mt-1 text-lg">Your health dashboard overview.</p>
           </div>
-          <Button icon={Calendar} onClick={() => navigate('/patient/book')}>
+          <Button icon={Calendar} size="lg" className="shadow-lg shadow-primary-500/20" onClick={() => navigate('/patient/book')}>
             Book Appointment
           </Button>
         </div>
 
         {/* Quick Stats / Next Appointment */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Next Appointment Card */}
           {nextAppointment ? (
-            <Card className="lg:col-span-2 bg-gradient-to-br from-primary-500 to-primary-600 text-white border-0">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6" />
-                  </div>
+            <div className="lg:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 text-white shadow-xl shadow-primary-900/10 group">
+              <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-12 -translate-y-12">
+                <Calendar className="w-64 h-64" />
+              </div>
+              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+              <div className="relative p-8 h-full flex flex-col justify-between z-10">
+                <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-primary-100 text-sm">Next Appointment</p>
-                    <h3 className="text-xl font-semibold mt-1">{nextAppointment.doctorName}</h3>
-                    <p className="text-primary-100">{nextAppointment.specialty}</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {nextAppointment.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {formatTime(nextAppointment.startTime)}
-                      </span>
-                    </div>
+                    <Badge variant="surface" className="bg-white/20 text-white border-none backdrop-blur-md mb-4">
+                      Next Appointment
+                    </Badge>
+                    <h3 className="text-2xl font-bold mb-1">{nextAppointment.doctorName}</h3>
+                    <p className="text-primary-100 text-lg">{nextAppointment.specialty}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10">
+                    <Video className="w-6 h-6 text-white" />
                   </div>
                 </div>
-                <Button
-                  variant="secondary"
-                  className="bg-white text-primary-600 hover:bg-primary-50"
-                  icon={Video}
-                  onClick={() => navigate(`/room/${nextAppointment.id}`)}
-                >
-                  Join Call
-                </Button>
+
+                <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
+                  <div className="flex gap-6">
+                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+                      <Calendar className="w-5 h-5 text-secondary-300" />
+                      <div>
+                        <p className="text-xs text-primary-200 font-medium uppercase tracking-wider">Date</p>
+                        <p className="font-semibold">{nextAppointment.date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
+                      <Clock className="w-5 h-5 text-secondary-300" />
+                      <div>
+                        <p className="text-xs text-primary-200 font-medium uppercase tracking-wider">Time</p>
+                        <p className="font-semibold">{formatTime(nextAppointment.startTime)}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-white text-primary-600 hover:bg-primary-50 border-none shadow-lg w-full sm:w-auto"
+                    icon={Video}
+                    onClick={() => navigate(`/room/${nextAppointment.id}`)}
+                  >
+                    Join Call
+                  </Button>
+                </div>
               </div>
-            </Card>
+            </div>
           ) : (
-            <Card className="lg:col-span-2 bg-gray-50 border-gray-200">
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <Calendar className="w-12 h-12 text-gray-300 mb-3" />
-                <h3 className="font-semibold text-gray-900">No Upcoming Appointments</h3>
-                <p className="text-gray-500 text-sm mt-1">Book an appointment to get started</p>
-                <Button className="mt-4" onClick={() => navigate('/patient/book')}>
-                  Book Now
+            <Card className="lg:col-span-2 border-dashed border-2 bg-gray-50/50 hover:bg-gray-50 transition-colors">
+              <div className="flex flex-col items-center justify-center py-12 text-center h-full">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">No Upcoming Appointments</h3>
+                <p className="text-gray-500 mt-2 max-w-sm mx-auto">You don't have any appointments scheduled. Book a consultation with a specialist today.</p>
+                <Button variant="outline" className="mt-6" onClick={() => navigate('/patient/book')}>
+                  Schedule Now
                 </Button>
               </div>
             </Card>
           )}
 
           {/* On-Demand Widget */}
-          <Card className="bg-success-50 border-success-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-success-500 rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-lg shadow-gray-200/50 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-success-50 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+
+            <div className="relative z-10">
+              <div className="w-12 h-12 bg-success-100 rounded-2xl flex items-center justify-center mb-4 text-success-600">
+                <Zap className="w-6 h-6" />
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">On-Demand Care</h3>
-                <p className="text-sm text-gray-500">{doctors.length} doctors available</p>
-              </div>
-            </div>
-            <div className="space-y-2 mb-4">
-              {doctors.slice(0, 2).map((doc) => (
-                <div key={doc.id} className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-success-500 rounded-full animate-pulse" />
-                  <span className="text-sm text-gray-700">{doc.fullName}</span>
+              <h3 className="text-xl font-bold text-gray-900">On-Demand Care</h3>
+              <p className="text-gray-500 mt-1 mb-6">Connect with available doctors instantly for urgent queries.</p>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-between text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-xl">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></span>
+                    Active Doctors
+                  </span>
+                  <span className="bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100">{doctors.length}</span>
                 </div>
-              ))}
+                <div className="flex items-center justify-between text-sm font-medium text-gray-900 bg-gray-50 p-3 rounded-xl">
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    Est. Wait Time
+                  </span>
+                  <span className="bg-white px-2 py-1 rounded-md shadow-sm border border-gray-100 text-success-600">~ 5 mins</span>
+                </div>
+              </div>
+
+              <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white shadow-xl shadow-gray-900/10" onClick={() => navigate('/patient/book')}>
+                Get Instant Care
+              </Button>
             </div>
-            <Button variant="success" size="sm" className="w-full" onClick={() => navigate('/patient/book')}>
-              Get Instant Care
-            </Button>
-          </Card>
+          </div>
         </div>
 
         {/* Browse Specialists */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Browse Verified Specialists</h2>
-            <Link to="/patient/book" className="text-primary-500 text-sm font-medium flex items-center gap-1 hover:text-primary-600">
-              View all <ChevronRight className="w-4 h-4" />
-            </Link>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Top Rated Specialists</h2>
+              <p className="text-gray-500 text-sm mt-0.5">Verified doctors with excellent track records</p>
+            </div>
+            <Button variant="ghost" onClick={() => navigate('/patient/book')} className="text-primary-600 hover:bg-primary-50">
+              View all <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
           </div>
+
           {doctors.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {doctors.map((doctor) => (
-                <Card key={doctor.id} padding="sm" className="hover:shadow-md transition-shadow">
-                  <div className="flex flex-col items-center text-center">
-                    <div 
-                      className="relative cursor-pointer" 
+                <div key={doctor.id} className="group bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 transition-all duration-300">
+                  <div className="relative mb-4">
+                    <div className="absolute inset-0 bg-primary-500 rounded-2xl opacity-0 group-hover:opacity-5 transition-opacity"></div>
+                    <div
+                      className="flex flex-col items-center cursor-pointer p-2"
                       onClick={() => handleViewProfile(doctor)}
-                      title="View Profile"
                     >
-                      <Avatar name={doctor.fullName} size="xl" className="mb-3 hover:ring-2 hover:ring-primary-300 transition-all" />
-                      <span className="absolute bottom-2 right-0 w-3 h-3 bg-success-500 rounded-full border-2 border-white" title="Verified" />
+                      <Avatar name={doctor.fullName} size="2xl" className="mb-3 ring-4 ring-gray-50 group-hover:ring-primary-50 transition-all" />
+                      <div className="absolute top-2 right-2">
+                        <div className="bg-white rounded-full p-1.5 shadow-sm border border-gray-100" title="Verified">
+                          <Check className="w-3 h-3 text-primary-500" />
+                        </div>
+                      </div>
                     </div>
-                    <h3 
-                      className="font-medium text-gray-900 cursor-pointer hover:text-primary-600 transition-colors"
+                  </div>
+
+                  <div className="text-center">
+                    <h3
+                      className="font-bold text-gray-900 text-lg cursor-pointer hover:text-primary-600 transition-colors"
                       onClick={() => handleViewProfile(doctor)}
                     >
                       {doctor.fullName}
                     </h3>
-                    <p className="text-sm text-primary-600">{doctor.specialization}</p>
-                    {doctor.bio && (
-                      <p className="text-xs text-gray-400 mt-1 line-clamp-1">{doctor.bio}</p>
-                    )}
-                    <div className="flex items-center gap-1 mt-2">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="text-sm font-medium">{doctor.rating || '0.0'}</span>
-                      <span className="text-xs text-gray-400">({doctor.reviewCount || 0} reviews)</span>
+                    <p className="text-primary-600 font-medium text-sm mb-3">{doctor.specialization}</p>
+
+                    <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-4 bg-gray-50 rounded-xl py-2">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                        <span className="font-semibold text-gray-900">{doctor.rating || '4.9'}</span>
+                      </div>
+                      <div className="w-px h-3 bg-gray-300"></div>
+                      <div className="flex items-center gap-1">
+                        <Award className="w-3.5 h-3.5 text-gray-400" />
+                        <span>{doctor.yearsOfExperience || '8+'} yrs</span>
+                      </div>
                     </div>
-                    <p className="text-primary-600 font-semibold mt-2">{doctor.consultationFee || 500} ETB</p>
-                    <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => handleBookClick(doctor)}>
-                      Book Now
+
+                    <Button className="w-full rounded-xl" onClick={() => handleBookClick(doctor)}>
+                      Book Appointment
                     </Button>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           ) : (
-            <Card className="text-center py-8">
+            <Card className="text-center py-12 border-dashed border-2">
               <p className="text-gray-500">No verified doctors available at the moment</p>
               <Button variant="outline" className="mt-4" onClick={() => navigate('/patient/book')}>
                 Check Later
@@ -331,85 +390,103 @@ export default function PatientDashboard() {
         </div>
 
         {/* Medical Records Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Recent Consultations */}
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-primary-500" />
                 Recent Consultations
               </h2>
-              <Link to="/patient/appointments" className="text-primary-500 text-sm font-medium">
-                View all
+              <Link to="/patient/appointments" className="text-primary-600 text-sm font-medium hover:underline">
+                View all history
               </Link>
             </div>
             {recentConsultations.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {recentConsultations.map((consultation) => (
                   <div
                     key={consultation.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-gray-50 hover:bg-white hover:shadow-md transition-all rounded-2xl border border-transparent hover:border-gray-100 group"
                   >
-                    <div>
-                      <p className="font-medium text-gray-900">{consultation.doctor}</p>
-                      <p className="text-sm text-gray-500">{consultation.diagnosis}</p>
-                      <p className="text-xs text-gray-400 mt-1">{consultation.date}</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-gray-100 text-primary-500 group-hover:bg-primary-50 group-hover:text-primary-600 transition-colors">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{consultation.doctor}</p>
+                        <p className="text-sm text-gray-500">{consultation.diagnosis}</p>
+                      </div>
                     </div>
-                    {consultation.hasPrescription && (
-                      <Badge variant="success" size="sm">
-                        <FileText className="w-3 h-3 mr-1" />
-                        Rx
-                      </Badge>
-                    )}
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900">{consultation.date}</p>
+                      {consultation.hasPrescription && (
+                        <div className="mt-1 inline-flex">
+                          <Badge variant="success" size="sm" className="rounded-lg">
+                            Rx Prescription
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-500">
-                <Activity className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p>No consultations yet</p>
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                <Activity className="w-10 h-10 mb-3 text-gray-300" />
+                <p>No consultations record found</p>
+                <p className="text-sm">Your medical history will appear here.</p>
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Quick Actions */}
-          <Card>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col">
+            <h2 className="text-lg font-bold text-gray-900 mb-6">Quick Actions</h2>
+            <div className="grid grid-cols-1 gap-3 flex-1">
               <button
                 onClick={() => navigate('/patient/book')}
-                className="p-4 bg-primary-50 rounded-xl text-left hover:bg-primary-100 transition-colors"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-primary-50 hover:text-primary-700 transition-all group text-left w-full"
               >
-                <Calendar className="w-6 h-6 text-primary-500 mb-2" />
-                <p className="font-medium text-gray-900">Schedule Visit</p>
-                <p className="text-sm text-gray-500">Book an appointment</p>
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-500 group-hover:text-primary-500">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 group-hover:text-primary-700">Schedule Visit</p>
+                  <p className="text-xs text-gray-500">Book new appointment</p>
+                </div>
+                <ChevronRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-primary-400" />
               </button>
+
               <button
                 onClick={() => navigate('/patient/prescriptions')}
-                className="p-4 bg-success-50 rounded-xl text-left hover:bg-success-100 transition-colors"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-success-50 hover:text-success-700 transition-all group text-left w-full"
               >
-                <FileText className="w-6 h-6 text-success-500 mb-2" />
-                <p className="font-medium text-gray-900">Prescriptions</p>
-                <p className="text-sm text-gray-500">View & download</p>
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-500 group-hover:text-success-500">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 group-hover:text-success-700">Prescriptions</p>
+                  <p className="text-xs text-gray-500">View & download Rx</p>
+                </div>
+                <ChevronRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-success-400" />
               </button>
+
               <button
                 onClick={() => navigate('/patient/appointments')}
-                className="p-4 bg-blue-50 rounded-xl text-left hover:bg-blue-100 transition-colors"
+                className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-blue-50 hover:text-blue-700 transition-all group text-left w-full"
               >
-                <Clock className="w-6 h-6 text-blue-500 mb-2" />
-                <p className="font-medium text-gray-900">My Appointments</p>
-                <p className="text-sm text-gray-500">View history</p>
-              </button>
-              <button
-                onClick={() => navigate('/patient/profile')}
-                className="p-4 bg-purple-50 rounded-xl text-left hover:bg-purple-100 transition-colors"
-              >
-                <Activity className="w-6 h-6 text-purple-500 mb-2" />
-                <p className="font-medium text-gray-900">Health Profile</p>
-                <p className="text-sm text-gray-500">Update records</p>
+                <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-gray-500 group-hover:text-blue-500">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900 group-hover:text-blue-700">History</p>
+                  <p className="text-xs text-gray-500">Past appointments</p>
+                </div>
+                <ChevronRight className="w-4 h-4 ml-auto text-gray-300 group-hover:text-blue-400" />
               </button>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
 
@@ -454,11 +531,10 @@ export default function PatientDashboard() {
                               <button
                                 key={slot.id}
                                 onClick={() => setSelectedSlot(slot)}
-                                className={`py-2 px-3 rounded-lg border text-sm transition-colors ${
-                                  selectedSlot?.id === slot.id
-                                    ? 'border-primary-500 bg-primary-50 text-primary-600'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
+                                className={`py-2 px-3 rounded-lg border text-sm transition-colors ${selectedSlot?.id === slot.id
+                                  ? 'border-primary-500 bg-primary-50 text-primary-600'
+                                  : 'border-gray-200 hover:border-gray-300'
+                                  }`}
                               >
                                 {formatTime(slot.startTime)}
                               </button>
@@ -515,9 +591,8 @@ export default function PatientDashboard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
                   <div className="space-y-2">
-                    <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'chapa' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
-                    }`}>
+                    <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'chapa' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                      }`}>
                       <input
                         type="radio"
                         name="payment"
@@ -531,9 +606,8 @@ export default function PatientDashboard() {
                         <p className="text-sm text-gray-500">Pay with Telebirr, CBE, or bank transfer</p>
                       </div>
                     </label>
-                    <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                      paymentMethod === 'stripe' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
-                    }`}>
+                    <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${paymentMethod === 'stripe' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'
+                      }`}>
                       <input
                         type="radio"
                         name="payment"
@@ -737,15 +811,15 @@ export default function PatientDashboard() {
               <div className="space-y-1">
                 {[5, 4, 3, 2, 1].map((star) => {
                   const count = profileDoctor.stats.ratingDistribution[star] || 0;
-                  const percentage = profileDoctor.stats.totalRatings > 0 
-                    ? (count / profileDoctor.stats.totalRatings) * 100 
+                  const percentage = profileDoctor.stats.totalRatings > 0
+                    ? (count / profileDoctor.stats.totalRatings) * 100
                     : 0;
                   return (
                     <div key={star} className="flex items-center gap-2 text-sm">
                       <span className="w-3">{star}</span>
                       <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                       <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-yellow-400 rounded-full"
                           style={{ width: `${percentage}%` }}
                         />

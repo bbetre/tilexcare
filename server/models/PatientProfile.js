@@ -45,6 +45,10 @@ const PatientProfile = sequelize.define('PatientProfile', {
     previousSurgeries: {
         type: DataTypes.TEXT,
     },
+    profilePictureUrl: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     timestamps: true,
 });

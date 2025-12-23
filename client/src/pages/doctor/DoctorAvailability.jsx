@@ -10,7 +10,8 @@ import {
   DollarSign,
   Loader2,
   AlertCircle,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { DoctorLayout } from '../../components/layout';
 import { Card, Button, Input, Select, Badge } from '../../components/ui';
@@ -39,6 +40,53 @@ export default function DoctorAvailability() {
   const [newVacationEnd, setNewVacationEnd] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [existingSlots, setExistingSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Fetch existing availability and schedule config on mount
+  useEffect(() => {
+    fetchExistingSlots();
+  }, []);
+
+  const fetchExistingSlots = async () => {
+    try {
+      setLoadingSlots(true);
+      const data = await doctorsAPI.getMyAvailability();
+      
+      // Handle both old format (array) and new format (object with slots)
+      if (Array.isArray(data)) {
+        setExistingSlots(data);
+      } else {
+        setExistingSlots(data.slots || []);
+        
+        // Load saved schedule config if available
+        if (data.scheduleConfig) {
+          setSchedule(data.scheduleConfig);
+        }
+        if (data.slotDuration) {
+          setSlotDuration(String(data.slotDuration));
+        }
+        if (data.breakTime) {
+          setBreakTime(String(data.breakTime));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching existing slots:', err);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId) => {
+    try {
+      await doctorsAPI.deleteAvailability(slotId);
+      setExistingSlots(existingSlots.filter(s => s.id !== slotId));
+    } catch (err) {
+      console.error('Error deleting slot:', err);
+      alert(err.message || 'Failed to delete slot');
+    }
+  };
 
   const toggleDay = (day) => {
     setSchedule({
@@ -92,6 +140,7 @@ export default function DoctorAvailability() {
     try {
       setSaving(true);
       setSaveSuccess(false);
+      setSaveMessage('');
       
       // Generate slots for the next 4 weeks based on schedule
       const slots = [];
@@ -141,12 +190,27 @@ export default function DoctorAvailability() {
         });
       }
       
+      // Save slots along with schedule configuration
+      const result = await doctorsAPI.setAvailability(
+        slots, 
+        schedule, 
+        parseInt(slotDuration), 
+        parseInt(breakTime)
+      );
+      
       if (slots.length > 0) {
-        await doctorsAPI.setAvailability(slots);
+        setSaveMessage(`Schedule updated: ${result.deleted || 0} old slots removed, ${result.created} new slots created`);
+      } else {
+        setSaveMessage(`Availability cleared: ${result.deleted || 0} slots removed`);
       }
       
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      // Refresh the existing slots list
+      await fetchExistingSlots();
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setSaveMessage('');
+      }, 5000);
     } catch (err) {
       console.error('Error saving availability:', err);
       alert(err.message || 'Failed to save availability');
@@ -164,10 +228,66 @@ export default function DoctorAvailability() {
             <h1 className="text-2xl font-bold text-gray-900">Availability Management</h1>
             <p className="text-gray-500 mt-1">Set your working hours and consultation settings</p>
           </div>
-          <Button icon={saving ? Loader2 : saveSuccess ? Check : Save} onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" icon={RefreshCw} onClick={fetchExistingSlots} disabled={loadingSlots}>
+              Refresh
+            </Button>
+            <Button icon={saving ? Loader2 : saveSuccess ? Check : Save} onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Changes'}
+            </Button>
+          </div>
         </div>
+
+        {/* Save Message */}
+        {saveMessage && (
+          <div className={`p-4 rounded-lg ${saveSuccess ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+            {saveMessage}
+          </div>
+        )}
+
+        {/* Existing Slots Summary */}
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Your Current Availability</h2>
+            <Badge variant={existingSlots.length > 0 ? 'success' : 'warning'}>
+              {loadingSlots ? 'Loading...' : `${existingSlots.length} slots available`}
+            </Badge>
+          </div>
+          {loadingSlots ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+            </div>
+          ) : existingSlots.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No availability slots set. Use the schedule below to create slots.</p>
+          ) : (
+            <div className="max-h-64 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {existingSlots.slice(0, 12).map((slot) => (
+                  <div key={slot.id} className={`p-3 rounded-lg border ${slot.isBooked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{new Date(slot.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                        <p className="text-xs text-gray-600">{slot.startTime?.slice(0, 5)} - {slot.endTime?.slice(0, 5)}</p>
+                      </div>
+                      {slot.isBooked ? (
+                        <Badge variant="error" size="sm">Booked</Badge>
+                      ) : (
+                        <button onClick={() => handleDeleteSlot(slot.id)} className="p-1 text-red-500 hover:bg-red-100 rounded">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {existingSlots.length > 12 && (
+                <p className="text-sm text-gray-500 mt-3 text-center">
+                  And {existingSlots.length - 12} more slots...
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Weekly Schedule */}

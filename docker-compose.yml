@@ -1,4 +1,5 @@
-version: '3.8'
+# TilexCare Docker Compose Configuration
+# Deploy with: docker compose up --build -d
 
 services:
   postgres:
@@ -12,11 +13,65 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-tilexcare}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - tilexcare_network
+    restart: unless-stopped
 
-  # We can add a local S3 compatible service like MinIO later if needed for development
-  # minio:
-  #   image: minio/minio
-  #   ...
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tilexcare_api
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-tilexcare}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      PORT: 5000
+      # Zoom SDK credentials (optional - for video consultations)
+      ZOOM_SDK_KEY: ${ZOOM_SDK_KEY:-}
+      ZOOM_SDK_SECRET: ${ZOOM_SDK_SECRET:-}
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - tilexcare_network
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: tilexcare_web
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - tilexcare_network
+    restart: unless-stopped
+
+networks:
+  tilexcare_network:
+    driver: bridge
 
 volumes:
   postgres_data:
