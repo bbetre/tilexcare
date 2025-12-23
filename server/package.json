@@ -21,7 +21,9 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "jsrsasign": "^11.1.0",
+    "multer": "^2.0.2",
     "pg": "^8.16.3",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "socket.io": "^4.8.1"
   }
 }
